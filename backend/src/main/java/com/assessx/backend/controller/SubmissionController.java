@@ -1,7 +1,6 @@
 package com.assessx.backend.controller;
 
 import com.assessx.backend.dto.ExamResultResponse;
-import com.assessx.backend.entity.Role;
 import com.assessx.backend.service.SubmissionService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;

@@ -4,7 +4,6 @@ import com.assessx.backend.dto.*;
 import com.assessx.backend.entity.Assessment;
 import com.assessx.backend.entity.Question;
 import com.assessx.backend.repository.AssessmentRepository;
-import com.assessx.backend.repository.QuestionRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -20,7 +19,6 @@ import java.util.stream.Collectors;
 public class AssessmentService {
 
     private final AssessmentRepository assessmentRepository;
-    private final QuestionRepository questionRepository;
 
     @Transactional(readOnly = true)
     public List<AssessmentSummaryDTO> getAllActiveAssessments() {

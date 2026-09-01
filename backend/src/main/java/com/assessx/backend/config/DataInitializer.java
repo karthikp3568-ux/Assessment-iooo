@@ -13,8 +13,11 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
+// Suppress warnings: admin/student vars used for save() side-effect, submissionRepository reserved for future seeding
+
 @Component
 @RequiredArgsConstructor
+@SuppressWarnings("unused")
 public class DataInitializer implements CommandLineRunner {
 
     private final UserRepository userRepository;
