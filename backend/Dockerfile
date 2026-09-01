@@ -14,12 +14,12 @@ COPY src src
 # Package the application
 RUN mvn package -DskipTests -B
 
-# Run stage - lightweight JRE only
+# Run stage - lightweight JRE with memory-efficient flags for free tier (512MB RAM)
 FROM eclipse-temurin:17-jre-alpine
 WORKDIR /app
-COPY --from=build /app/target/backend-*.jar app.jar
+COPY --from=build /app/target/backend-0.0.1-SNAPSHOT.jar app.jar
 
 ENV PORT=8080
 EXPOSE 8080
 
-ENTRYPOINT ["sh", "-c", "java -Dserver.port=${PORT} -jar app.jar"]
+ENTRYPOINT ["sh", "-c", "java -XX:+UseSerialGC -Xss512k -XX:MaxRAMPercentage=75.0 -Dserver.port=${PORT} -jar app.jar"]

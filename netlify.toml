@@ -1,0 +1,9 @@
+# Netlify configuration for automatic zero-config deployment
+[build]
+  publish = "frontend"
+
+# SPA route fallback
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
