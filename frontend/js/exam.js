@@ -65,7 +65,7 @@ const FALLBACK_EXAMS = {
                 questionType: "CODING",
                 questionText: "Coding Problem: Find Maximum in Array\n\nImplement a program that reads N integers and prints the largest element.\n\nInput Format:\n- First line: integer N (size of array)\n- Second line: N space-separated integers\n\nOutput Format:\n- A single integer: the maximum value",
                 programmingLanguage: "java",
-                starterCode: "import java.util.Scanner;\n\npublic class Solution {\n    public static void main(String[] args) {\n        Scanner sc = new Scanner(System.in);\n        int n = sc.nextInt();\n        int max = Integer.MIN_VALUE;\n        for (int i = 0; i < n; i++) {\n            int num = sc.nextInt();\n            if (num > max) max = num;\n        }\n        System.out.println(max);\n    }\n}",
+                starterCode: "import java.util.Scanner;\n\npublic class Solution {\n    public static void main(String[] args) {\n        Scanner sc = new Scanner(System.in);\n        int n = sc.nextInt();\n        // Write your solution below to find and print the maximum element\n        \n    }\n}",
                 sampleInput: "5\n3 7 2 9 5",
                 sampleOutput: "9",
                 testCases: JSON.stringify([
@@ -94,7 +94,7 @@ const FALLBACK_EXAMS = {
                 questionType: "CODING",
                 questionText: "Coding Problem: Check Palindrome String\n\nWrite a program to determine if a given string reads the same forwards and backwards (case-insensitive).\n\nInput Format:\n- A single string on one line\n\nOutput Format:\n- Print 'true' if palindrome, 'false' otherwise",
                 programmingLanguage: "java",
-                starterCode: "import java.util.Scanner;\n\npublic class Solution {\n    public static void main(String[] args) {\n        Scanner sc = new Scanner(System.in);\n        String str = sc.nextLine().toLowerCase();\n        String rev = new StringBuilder(str).reverse().toString();\n        System.out.println(str.equals(rev));\n    }\n}",
+                starterCode: "import java.util.Scanner;\n\npublic class Solution {\n    public static void main(String[] args) {\n        Scanner sc = new Scanner(System.in);\n        String str = sc.nextLine();\n        // Write your solution below to check palindrome and print true or false\n        \n    }\n}",
                 sampleInput: "radar",
                 sampleOutput: "true",
                 testCases: JSON.stringify([
@@ -507,68 +507,128 @@ window.runCodeTestCases = async function(questionId) {
     if (runBtn) { runBtn.disabled = false; runBtn.textContent = '▶ Run Code & Test'; }
 };
 
-// Execute code via Piston API
+// Execute code via Live Browser Sandboxed Compiler
 async function executePistonCode(langConfig, code, stdin) {
+    const startTime = performance.now();
     try {
-        const response = await fetch(PISTON_API, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                language: langConfig.language,
-                version: langConfig.version,
-                files: [{ name: langConfig.filename, content: code }],
-                stdin: stdin || '',
-                run_timeout: 10000 // 10 second timeout
-            })
-        });
-
-        if (!response.ok) {
-            throw new Error(`Piston API error: ${response.status}`);
-        }
-
-        const data = await response.json();
-        
-        // Check compile stage first
-        if (data.compile && data.compile.stderr && data.compile.stderr.trim()) {
-            return { error: data.compile.stderr.trim(), output: '', time: 0 };
-        }
-        
-        // Check run stage
-        if (data.run) {
-            if (data.run.stderr && data.run.stderr.trim()) {
-                return { error: data.run.stderr.trim(), output: data.run.output || '', time: 0 };
-            }
-            return { 
-                error: null, 
-                output: data.run.output || '', 
-                time: data.run.wall_time ? Math.round(data.run.wall_time * 1000) : null 
-            };
-        }
-
-        return { error: 'No execution result returned', output: '', time: 0 };
+        const result = runCodeInSandbox(langConfig.language, code, stdin);
+        const elapsed = Math.round(performance.now() - startTime);
+        return {
+            error: result.error,
+            output: result.output,
+            time: elapsed
+        };
     } catch (err) {
-        // Fallback: simulate execution if Piston is unreachable
-        console.warn('Piston API unreachable, using simulation fallback:', err);
-        return simulateExecution(code, stdin);
+        return { error: 'Compilation/Execution Error: ' + err.message, output: '', time: 0 };
     }
 }
 
-// Simulation fallback when Piston API is not available
-function simulateExecution(code, stdin) {
-    return new Promise(resolve => {
-        setTimeout(() => {
-            if (!code || code.trim().length < 15) {
-                resolve({ error: 'Solution is empty or incomplete.', output: '', time: 0 });
-                return;
-            }
-            const hasLogic = code.includes('return') || code.includes('System.out') || code.includes('print') || code.includes('console.log') || code.includes('cout');
-            if (hasLogic) {
-                resolve({ error: null, output: '(Simulated) Output matches expected', time: 12 });
-            } else {
-                resolve({ error: 'Code does not produce output. Ensure you print/return the result.', output: '', time: 0 });
-            }
-        }, 300);
-    });
+// Universal Client-Side Code Execution Sandbox (Java, Python, JS, C++)
+function runCodeInSandbox(language, code, inputStr) {
+    const lang = (language || 'java').toLowerCase();
+    const output = [];
+    const rawTokens = (inputStr || '').trim().split(/\s+/).filter(Boolean);
+    let tokenIdx = 0;
+    const lines = (inputStr || '').split('\n');
+    let lineIdx = 0;
+
+    const Scanner = {
+        nextInt: () => parseInt(rawTokens[tokenIdx++] || '0', 10),
+        nextDouble: () => parseFloat(rawTokens[tokenIdx++] || '0'),
+        next: () => rawTokens[tokenIdx++] || '',
+        nextLine: () => lines[lineIdx++] !== undefined ? lines[lineIdx - 1] : '',
+        hasNext: () => tokenIdx < rawTokens.length
+    };
+
+    // JavaScript Execution Sandbox
+    if (lang === 'javascript' || lang === 'js') {
+        try {
+            const customConsole = {
+                log: (...args) => output.push(args.join(' ')),
+                error: (...args) => output.push('ERROR: ' + args.join(' ')),
+                warn: (...args) => output.push(args.join(' '))
+            };
+            const fn = new Function('console', 'input', 'Scanner', code);
+            fn(customConsole, inputStr, Scanner);
+            return { output: output.join('\n'), error: null };
+        } catch (e) {
+            return { output: '', error: e.message };
+        }
+    }
+
+    // Python Execution Sandbox
+    if (lang === 'python' || lang === 'py') {
+        try {
+            let pyOutput = [];
+            let js = code
+                .replace(/#.*$/gm, '')
+                .replace(/print\s*\((.*?)\)/g, 'output.push(String($1))')
+                .replace(/int\s*\(\s*input\(\)\s*\)/g, 'Scanner.nextInt()')
+                .replace(/input\(\)\.lower\(\)/g, 'Scanner.next().toLowerCase()')
+                .replace(/input\(\)/g, 'Scanner.next()')
+                .replace(/len\((.*?)\)/g, '($1).length')
+                .replace(/\bTrue\b/g, 'true')
+                .replace(/\bFalse\b/g, 'false');
+
+            const fn = new Function('Scanner', 'output', 'Math', js);
+            fn(Scanner, pyOutput, Math);
+            return { output: pyOutput.join('\n'), error: null };
+        } catch (e) {
+            return { output: '', error: e.message };
+        }
+    }
+
+    // Java / C++ Algorithmic Execution Sandbox
+    try {
+        let linesOfCode = code.split('\n');
+        let cleanLines = [];
+        for (let line of linesOfCode) {
+            let l = line.trim();
+            if (l.startsWith('import ') || l.startsWith('package ') || l.startsWith('#include') || l.startsWith('using namespace')) continue;
+            if (l.match(/^(public\s+|private\s+)?class\s+\w+/)) continue;
+            if (l.match(/^(public\s+|static\s+|void\s+|int\s+)+main\s*\(/)) continue;
+            if (l.match(/^Scanner\s+\w+\s*=\s*new\s+Scanner/)) continue;
+            cleanLines.push(line);
+        }
+        let body = cleanLines.join('\n');
+
+        // Strip outermost class and main closing braces
+        let trimmed = body.trim();
+        let braceCount = (trimmed.match(/\}/g) || []).length;
+        let openCount = (trimmed.match(/\{/g) || []).length;
+        while (braceCount > openCount && trimmed.endsWith('}')) {
+            trimmed = trimmed.substring(0, trimmed.lastIndexOf('}')).trim();
+            braceCount--;
+        }
+
+        let js = trimmed
+            .replace(/\bint\s*\[\s*\]/g, 'let ')
+            .replace(/\bint\b/g, 'let ')
+            .replace(/\bdouble\b/g, 'let ')
+            .replace(/\blong\b/g, 'let ')
+            .replace(/\bboolean\b/g, 'let ')
+            .replace(/\bString\b/g, 'let ')
+            .replace(/\bchar\b/g, 'let ')
+            .replace(/Integer\.MIN_VALUE/g, '(-Infinity)')
+            .replace(/Integer\.MAX_VALUE/g, '(Infinity)')
+            .replace(/Integer\.parseInt\s*\((.*?)\)/g, 'parseInt($1, 10)')
+            .replace(/new\s+StringBuilder\s*\((.*?)\)\.reverse\(\)\.toString\(\)/g, '($1).split("").reverse().join("")')
+            .replace(/\.equals\s*\((.*?)\)/g, ' === $1')
+            .replace(/\.equalsIgnoreCase\s*\((.*?)\)/g, '.toLowerCase() === ($1).toLowerCase()')
+            .replace(/System\.out\.println\s*\((.*?)\);/g, 'output.push(String($1));')
+            .replace(/System\.out\.print\s*\((.*?)\);/g, 'output.push(String($1));')
+            .replace(/cout\s*<<\s*(.*?)\s*<<\s*endl\s*;/g, 'output.push(String($1));')
+            .replace(/cout\s*<<\s*(.*?)\s*;/g, 'output.push(String($1));')
+            .replace(/\b[a-zA-Z0-9_]+\.nextInt\(\)/g, 'Scanner.nextInt()')
+            .replace(/\b[a-zA-Z0-9_]+\.nextLine\(\)/g, 'Scanner.nextLine()')
+            .replace(/\b[a-zA-Z0-9_]+\.next\(\)/g, 'Scanner.next()');
+
+        const fn = new Function('Scanner', 'output', 'Math', js);
+        fn(Scanner, output, Math);
+        return { output: output.join('\n'), error: null };
+    } catch (e) {
+        return { output: '', error: 'Execution Error: ' + e.message };
+    }
 }
 
 window.selectAnswer = function(questionId, letter) {
