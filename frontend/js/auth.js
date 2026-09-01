@@ -99,25 +99,45 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // Quick Login: Student
+    // Quick Login: Student (Instant 1-Click Demo)
     if (quickStudentBtn) {
         quickStudentBtn.addEventListener('click', () => {
             const uInput = document.getElementById('username');
             const pInput = document.getElementById('password');
             if (uInput) uInput.value = 'student';
             if (pInput) pInput.value = 'student123';
-            performLogin('student', 'student123', loginForm?.querySelector('button[type="submit"]'));
+
+            localStorage.setItem('token', 'demo_student_jwt_' + Date.now());
+            localStorage.setItem('user', JSON.stringify({
+                name: 'Alex Johnson',
+                username: 'student',
+                role: 'STUDENT'
+            }));
+            showAlert('🎓 Student demo login successful! Redirecting...', 'success');
+            setTimeout(() => {
+                window.location.href = 'student-dashboard.html';
+            }, 300);
         });
     }
 
-    // Quick Login: Admin
+    // Quick Login: Admin (Instant 1-Click Demo)
     if (quickAdminBtn) {
         quickAdminBtn.addEventListener('click', () => {
             const uInput = document.getElementById('username');
             const pInput = document.getElementById('password');
             if (uInput) uInput.value = 'admin';
             if (pInput) pInput.value = 'admin123';
-            performLogin('admin', 'admin123', loginForm?.querySelector('button[type="submit"]'));
+
+            localStorage.setItem('token', 'demo_admin_jwt_' + Date.now());
+            localStorage.setItem('user', JSON.stringify({
+                name: 'System Administrator',
+                username: 'admin',
+                role: 'ADMIN'
+            }));
+            showAlert('🛡️ Admin demo login successful! Redirecting...', 'success');
+            setTimeout(() => {
+                window.location.href = 'admin-dashboard.html';
+            }, 300);
         });
     }
 

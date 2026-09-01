@@ -37,13 +37,19 @@ class ApiService {
             headers['Authorization'] = `Bearer ${token}`;
         }
 
+        // 3.5s network timeout to prevent hanging on sleeping/offline backends
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 3500);
+
         const config = {
             ...options,
-            headers
+            headers,
+            signal: controller.signal
         };
 
         try {
             const response = await fetch(`${API_BASE_URL}${endpoint}`, config);
+            clearTimeout(timeoutId);
             
             // Handle non-JSON responses gracefully
             let data;
@@ -60,6 +66,7 @@ class ApiService {
 
             return data;
         } catch (error) {
+            clearTimeout(timeoutId);
             console.error('API Error:', error);
             throw error;
         }
