@@ -48,6 +48,20 @@
             <div class="text-center mt-3">
                 <a href="register.html" class="auth-subtitle">Don't have an account? <strong style="color: var(--primary);">Register here</strong></a>
             </div>
+
+            <div class="text-center mt-3" style="font-size: 0.75rem; border-top: 1px dashed var(--border); padding-top: 0.75rem;">
+                <button type="button" id="toggleServerSettingsBtn" style="background: transparent; border: none; font-size: 0.75rem; color: var(--text-muted); cursor: pointer; text-decoration: underline;">
+                    ⚙️ Configure Backend Server URL
+                </button>
+                <div id="serverSettingsBox" class="hidden mt-2" style="background: #F8FAFC; border: 1px solid var(--border); border-radius: 0.375rem; padding: 0.625rem; text-align: left;">
+                    <label class="form-label" style="font-size: 0.7rem; margin-bottom: 0.25rem;">Backend API URL (Render/Railway):</label>
+                    <div class="flex gap-1">
+                        <input type="text" id="apiBaseUrlInput" class="form-control" style="font-size: 0.75rem; padding: 0.3rem 0.5rem;" placeholder="https://assessx-backend.onrender.com/api/v1">
+                        <button type="button" id="saveApiUrlBtn" class="btn btn-primary btn-sm" style="font-size: 0.75rem; padding: 0.3rem 0.6rem;">Save</button>
+                    </div>
+                    <span id="apiUrlSaveMsg" class="hidden" style="font-size: 0.7rem; color: var(--secondary); margin-top: 0.25rem; display: block;">Saved! Reloading...</span>
+                </div>
+            </div>
         </div>
     </div>
 
