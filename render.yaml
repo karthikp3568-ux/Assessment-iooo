@@ -1,0 +1,18 @@
+services:
+  # Backend Spring Boot Service
+  - type: web
+    name: assessx-backend
+    runtime: docker
+    dockerfilePath: ./backend/Dockerfile
+    dockerContext: ./backend
+    plan: free
+    envVars:
+      - key: PORT
+        value: 8080
+
+  # Frontend Static Site
+  - type: staticSite
+    name: assessx-frontend
+    rootDir: frontend
+    publishDir: .
+    plan: free

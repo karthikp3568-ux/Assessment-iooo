@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Register - AssessX</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <div class="auth-container">
+        <div class="card auth-card">
+            <div class="auth-header">
+                <div class="auth-logo">AssessX</div>
+                <div class="auth-subtitle">Create your account</div>
+            </div>
+
+            <div id="alertMessage" class="alert hidden"></div>
+
+            <form id="registerForm">
+                <div class="form-group">
+                    <label class="form-label" for="name">Full Name</label>
+                    <input type="text" id="name" class="form-control" required placeholder="Enter full name">
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label" for="username">Username / Student ID</label>
+                    <input type="text" id="username" class="form-control" required placeholder="Enter username">
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label" for="password">Password</label>
+                    <input type="password" id="password" class="form-control" required placeholder="Enter password">
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label" for="role">Register As</label>
+                    <select id="role" class="form-control" required>
+                        <option value="student">Student</option>
+                        <option value="admin">Admin</option>
+                    </select>
+                </div>
+
+                <button type="submit" class="btn btn-primary btn-block mt-4">Register</button>
+            </form>
+
+            <div class="text-center mt-4">
+                <a href="index.html" class="auth-subtitle">Already have an account? Sign in</a>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/api.js"></script>
+    <script src="js/auth.js"></script>
+</body>
+</html>

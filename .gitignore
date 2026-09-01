@@ -1,0 +1,31 @@
+# Maven
+target/
+**/target/
+!.mvn/wrapper/maven-wrapper.jar
+*.class
+
+# IDEs and Editors
+.idea/
+.vscode/
+*.iml
+*.iws
+*.ipr
+.settings/
+.project
+.classpath
+.apt_generated
+.factorypath
+.springBeans
+.sts4-cache
+
+# OS Files
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# Node (if any)
+node_modules/
+dist/
+build/
