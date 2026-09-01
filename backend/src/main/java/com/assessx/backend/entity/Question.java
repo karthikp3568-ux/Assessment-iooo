@@ -23,23 +23,37 @@ public class Question {
     @EqualsAndHashCode.Exclude
     private Assessment assessment;
 
+    @Builder.Default
+    @Column(nullable = false)
+    private String questionType = "MCQ"; // "MCQ" or "CODING"
+
     @Column(length = 2000, nullable = false)
     private String questionText;
 
-    @Column(nullable = false)
+    // MCQ Fields (Nullable for CODING questions)
     private String optionA;
-
-    @Column(nullable = false)
     private String optionB;
-
-    @Column(nullable = false)
     private String optionC;
-
-    @Column(nullable = false)
     private String optionD;
-
-    @Column(nullable = false, length = 1)
     private String correctOption; // 'A', 'B', 'C', or 'D'
+
+    // Coding Question Fields
+    @Column(columnDefinition = "TEXT")
+    private String starterCode;
+
+    private String programmingLanguage; // "java", "python", "javascript", "cpp"
+
+    @Column(columnDefinition = "TEXT")
+    private String sampleInput;
+
+    @Column(columnDefinition = "TEXT")
+    private String sampleOutput;
+
+    @Column(columnDefinition = "TEXT")
+    private String testCases; // JSON array of [{"input": "...", "output": "..."}]
+
+    @Column(columnDefinition = "TEXT")
+    private String solutionCode;
 
     private int marks;
 

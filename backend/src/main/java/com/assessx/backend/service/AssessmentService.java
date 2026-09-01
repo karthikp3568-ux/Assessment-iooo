@@ -37,11 +37,17 @@ public class AssessmentService {
         List<QuestionDTO> questionDTOs = assessment.getQuestions().stream()
                 .map(q -> QuestionDTO.builder()
                         .id(q.getId())
+                        .questionType(q.getQuestionType() != null ? q.getQuestionType() : "MCQ")
                         .questionText(q.getQuestionText())
                         .optionA(q.getOptionA())
                         .optionB(q.getOptionB())
                         .optionC(q.getOptionC())
                         .optionD(q.getOptionD())
+                        .starterCode(q.getStarterCode())
+                        .programmingLanguage(q.getProgrammingLanguage() != null ? q.getProgrammingLanguage() : "java")
+                        .sampleInput(q.getSampleInput())
+                        .sampleOutput(q.getSampleOutput())
+                        .testCases(q.getTestCases())
                         .marks(q.getMarks())
                         .build())
                 .collect(Collectors.toList());
@@ -74,16 +80,27 @@ public class AssessmentService {
         int totalMarks = 0;
         if (request.getQuestions() != null && !request.getQuestions().isEmpty()) {
             for (CreateQuestionRequest qReq : request.getQuestions()) {
-                int marks = qReq.getMarks() > 0 ? qReq.getMarks() : 1;
+                int marks = qReq.getMarks() > 0 ? qReq.getMarks() : 10;
                 totalMarks += marks;
+                
+                String qType = qReq.getQuestionType() != null && !qReq.getQuestionType().isBlank()
+                        ? qReq.getQuestionType().toUpperCase() : "MCQ";
+
                 Question question = Question.builder()
                         .assessment(assessment)
+                        .questionType(qType)
                         .questionText(qReq.getQuestionText())
                         .optionA(qReq.getOptionA())
                         .optionB(qReq.getOptionB())
                         .optionC(qReq.getOptionC())
                         .optionD(qReq.getOptionD())
-                        .correctOption(qReq.getCorrectOption() != null ? qReq.getCorrectOption().toUpperCase() : "A")
+                        .correctOption(qReq.getCorrectOption() != null ? qReq.getCorrectOption().toUpperCase() : (qType.equals("MCQ") ? "A" : null))
+                        .starterCode(qReq.getStarterCode())
+                        .programmingLanguage(qReq.getProgrammingLanguage() != null ? qReq.getProgrammingLanguage() : "java")
+                        .sampleInput(qReq.getSampleInput())
+                        .sampleOutput(qReq.getSampleOutput())
+                        .testCases(qReq.getTestCases())
+                        .solutionCode(qReq.getSolutionCode())
                         .marks(marks)
                         .explanation(qReq.getExplanation())
                         .build();

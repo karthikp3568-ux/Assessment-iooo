@@ -1,7 +1,27 @@
-// Dynamic API base URL: Checks window.ENV, localStorage, or defaults to localhost
-const API_BASE_URL = window.ENV?.API_BASE_URL || 
-                     localStorage.getItem('API_BASE_URL') || 
-                     'http://localhost:8080/api/v1';
+// Dynamic API base URL resolution:
+// Priority: window.ENV > localStorage > same-origin /api/v1 > localhost fallback
+//
+// For deployment:
+// - On Render: set localStorage.setItem('API_BASE_URL', 'https://your-backend.onrender.com/api/v1')
+// - Or inject via window.ENV in a config script
+// - Or use Netlify _redirects to proxy /api/* to your backend
+const API_BASE_URL = (() => {
+    // 1. Explicit environment config
+    if (window.ENV?.API_BASE_URL) return window.ENV.API_BASE_URL;
+    
+    // 2. Saved in localStorage (set once from browser console)
+    const stored = localStorage.getItem('API_BASE_URL');
+    if (stored) return stored;
+    
+    // 3. If running on localhost, use localhost backend
+    if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+        return 'http://localhost:8080/api/v1';
+    }
+    
+    // 4. Production: assume backend is on same origin (works with Netlify _redirects proxy)
+    //    OR the user can set API_BASE_URL in localStorage from the browser console
+    return window.location.origin + '/api/v1';
+})();
 
 
 class ApiService {

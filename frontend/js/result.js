@@ -1,4 +1,4 @@
-// AssessX Result Scorecard Handler with Proctoring Audit Trail
+// AssessX Result Scorecard Handler supporting both MCQ and Coding Question breakdowns
 
 document.addEventListener('DOMContentLoaded', async () => {
     const token = localStorage.getItem('token');
@@ -76,7 +76,6 @@ function renderScorecard(res) {
     } else {
         violEl.innerHTML = `<span style="color: var(--danger); font-size: 1.25rem;">${violationsCount} Flagged</span>`;
         
-        // Show detailed audit logs if stored
         if (auditCard && auditLogsList) {
             auditCard.classList.remove('hidden');
             if (auditBadge) auditBadge.textContent = `${violationsCount} Flagged`;
@@ -105,23 +104,39 @@ function renderScorecard(res) {
 
     reviewContainer.innerHTML = res.answers.map((a, idx) => {
         const isCorrect = a.correct;
+        const isCoding = (a.questionType && a.questionType.toUpperCase() === 'CODING') || (a.submittedCode != null && a.submittedCode.length > 5);
         const borderColor = isCorrect ? 'var(--secondary)' : 'var(--danger)';
         const bgBadge = isCorrect ? 'badge-success' : 'badge-danger';
-        const statusText = isCorrect ? '✓ Correct' : '✗ Incorrect';
+        const statusText = isCorrect ? '✓ Correct / Passed' : '✗ Incomplete / Incorrect';
+        const typeLabel = isCoding ? '💻 Coding Challenge' : '🔘 MCQ';
 
         return `
             <div style="border-left: 4px solid ${borderColor}; padding: 1.25rem; background: var(--bg-color); border-radius: 0.5rem;">
                 <div class="flex justify-between items-center mb-2">
-                    <span style="font-weight: 700; font-size: 0.95rem;">Question ${idx + 1}</span>
+                    <span style="font-weight: 700; font-size: 0.95rem;">Question ${idx + 1} <span style="font-size: 0.8rem; color: var(--text-muted); font-weight: normal;">(${typeLabel})</span></span>
                     <span class="badge ${bgBadge}">${statusText} (${a.marksAwarded} Marks)</span>
                 </div>
-                <div style="font-size: 1rem; font-weight: 600; margin-bottom: 0.75rem;">
+                <div style="font-size: 1rem; font-weight: 600; margin-bottom: 0.75rem; white-space: pre-wrap;">
                     ${escapeHtml(a.questionText)}
                 </div>
-                <div class="flex gap-4 mb-2" style="font-size: 0.875rem;">
-                    <div><strong>Your Answer:</strong> <span style="color: ${isCorrect ? 'var(--secondary)' : 'var(--danger)'}; font-weight: 600;">Option ${a.selectedOption || 'None'}</span></div>
-                    <div><strong>Correct Answer:</strong> <span style="color: var(--secondary); font-weight: 600;">Option ${a.correctOption}</span></div>
-                </div>
+
+                ${isCoding ? `
+                    <div class="mb-2">
+                        <div style="font-size: 0.8125rem; font-weight: 600; color: var(--text-muted); margin-bottom: 0.25rem;">Submitted Code Solution:</div>
+                        <pre class="code-snippet-box">${escapeHtml(a.submittedCode || '// No code submitted')}</pre>
+                    </div>
+                    ${a.testResults ? `
+                        <div style="font-size: 0.8125rem; margin-bottom: 0.5rem; font-weight: 600; color: ${isCorrect ? 'var(--secondary)' : 'var(--danger)'};">
+                            ${escapeHtml(a.testResults)}
+                        </div>
+                    ` : ''}
+                ` : `
+                    <div class="flex gap-4 mb-2" style="font-size: 0.875rem;">
+                        <div><strong>Your Answer:</strong> <span style="color: ${isCorrect ? 'var(--secondary)' : 'var(--danger)'}; font-weight: 600;">Option ${escapeHtml(a.selectedOption || 'None')}</span></div>
+                        <div><strong>Correct Answer:</strong> <span style="color: var(--secondary); font-weight: 600;">Option ${escapeHtml(a.correctOption || 'N/A')}</span></div>
+                    </div>
+                `}
+
                 ${a.explanation ? `
                     <div style="font-size: 0.8125rem; color: var(--text-muted); background: #FFFFFF; padding: 0.625rem 0.875rem; border-radius: 0.375rem; border: 1px solid var(--border);">
                         💡 <strong>Explanation:</strong> ${escapeHtml(a.explanation)}

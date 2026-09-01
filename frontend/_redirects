@@ -1,0 +1,9 @@
+# Netlify _redirects
+# Proxy API requests to the backend on Render
+# Replace YOUR_BACKEND_URL with your actual Render backend URL after deploying
+# Example: https://assessx-backend.onrender.com
+
+/api/*  https://YOUR_BACKEND_URL/api/:splat  200
+
+# SPA fallback - serve index.html for all other routes
+/*    /index.html   200

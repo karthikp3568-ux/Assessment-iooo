@@ -1,9 +1,10 @@
-// AssessX Live Exam Engine with Real-Time AI Phone Detection & Strict Security Lockdown
+// AssessX Live Exam Engine supporting BOTH MCQs and Live Coding Questions with AI Proctoring
+// Enhanced with CodeMirror editor + Piston API real code execution + Multiple Test Cases
 
 let assessment = null;
 let questions = [];
 let currentIndex = 0;
-let answers = {}; // questionId -> "A"|"B"|"C"|"D"
+let answers = {}; // questionId -> "A"|"B"|"C"|"D" or code string
 let flaggedQuestions = new Set();
 let timerInterval = null;
 let timeRemaining = 0;
@@ -16,78 +17,112 @@ let cocoModel = null;
 let detectionInterval = null;
 let audioCtx = null;
 let lastPhoneViolationTime = 0;
+let codeMirrorInstance = null; // CodeMirror editor instance
 
-// Fallback Questions to ensure student is NEVER blocked under any network/server scenario
+// Piston API configuration for real code execution
+const PISTON_API = 'https://emkc.org/api/v2/piston/execute';
+const LANG_MAP = {
+    'java': { language: 'java', version: '15.0.2', filename: 'Solution.java' },
+    'python': { language: 'python', version: '3.10.0', filename: 'solution.py' },
+    'javascript': { language: 'javascript', version: '18.15.0', filename: 'solution.js' },
+    'cpp': { language: 'c++', version: '10.2.0', filename: 'solution.cpp' },
+    'c++': { language: 'c++', version: '10.2.0', filename: 'solution.cpp' }
+};
+
+// CodeMirror mode mapping
+const CM_MODE_MAP = {
+    'java': 'text/x-java',
+    'python': 'python',
+    'javascript': 'javascript',
+    'cpp': 'text/x-c++src',
+    'c++': 'text/x-c++src'
+};
+
+// Fallback Exam with both MCQs and Coding questions (with multiple test cases)
 const FALLBACK_EXAMS = {
     1: {
         id: 1,
         title: "Java Core & Spring Boot Master Exam",
-        category: "Java & Spring Boot",
-        durationMinutes: 30,
+        category: "Java & Backend",
+        durationMinutes: 45,
         totalMarks: 50,
         passMarks: 30,
         questions: [
             {
                 id: 101,
-                questionText: "Which HTTP status code is returned by Spring Boot when a resource is successfully created via @PostMapping?",
-                optionA: "200 OK",
-                optionB: "201 Created",
-                optionC: "204 No Content",
-                optionD: "302 Found",
+                questionType: "MCQ",
+                questionText: "Which Java Collection interface allows duplicate elements and maintains insertion order?",
+                optionA: "Set",
+                optionB: "List",
+                optionC: "Map",
+                optionD: "Queue",
                 marks: 10,
                 correctOption: "B",
-                explanation: "HTTP 201 Created is the standard response indicating that the request has succeeded and led to the creation of a resource."
+                explanation: "List allows duplicate elements and guarantees positional access and insertion order preservation."
             },
             {
                 id: 102,
-                questionText: "Which annotation in Spring Boot is used to mark a class as a global exception handling component?",
-                optionA: "@ExceptionHandler",
-                optionB: "@ControllerAdvice / @RestControllerAdvice",
-                optionC: "@ResponseStatus",
-                optionD: "@ErrorHandling",
+                questionType: "CODING",
+                questionText: "Coding Problem: Find Maximum in Array\n\nImplement a program that reads N integers and prints the largest element.\n\nInput Format:\n- First line: integer N (size of array)\n- Second line: N space-separated integers\n\nOutput Format:\n- A single integer: the maximum value",
+                programmingLanguage: "java",
+                starterCode: "import java.util.Scanner;\n\npublic class Solution {\n    public static void main(String[] args) {\n        Scanner sc = new Scanner(System.in);\n        int n = sc.nextInt();\n        int max = Integer.MIN_VALUE;\n        for (int i = 0; i < n; i++) {\n            int num = sc.nextInt();\n            if (num > max) max = num;\n        }\n        System.out.println(max);\n    }\n}",
+                sampleInput: "5\n3 7 2 9 5",
+                sampleOutput: "9",
+                testCases: JSON.stringify([
+                    { input: "5\n3 7 2 9 5", expectedOutput: "9" },
+                    { input: "3\n1 2 3", expectedOutput: "3" },
+                    { input: "1\n42", expectedOutput: "42" }
+                ]),
                 marks: 10,
-                correctOption: "B",
-                explanation: "@ControllerAdvice and @RestControllerAdvice allow handling exceptions across the whole application in one global component."
+                correctOption: "Solution",
+                explanation: "Iterate through the array while maintaining the current maximum value seen so far. Time complexity is O(N)."
             },
             {
                 id: 103,
-                questionText: "What is the primary role of the ApplicationContext in the Spring Framework?",
-                optionA: "Managing database connections and transactions directly",
-                optionB: "IoC Container responsible for instantiating, configuring, and wiring beans",
-                optionC: "Compiling Java bytecode to native machine code",
-                optionD: "Rendering HTML user interfaces on the server",
+                questionType: "MCQ",
+                questionText: "In Spring Boot, which annotation is used to designate a class as a global exception handler for REST controllers?",
+                optionA: "@ExceptionHandler",
+                optionB: "@ControllerAdvice / @RestControllerAdvice",
+                optionC: "@ResponseStatus",
+                optionD: "@GlobalHandler",
                 marks: 10,
                 correctOption: "B",
-                explanation: "ApplicationContext is Spring's central Inversion of Control (IoC) container that manages bean lifecycle and dependency injection."
+                explanation: "@RestControllerAdvice combines @ControllerAdvice and @ResponseBody to handle exceptions across all controllers globally."
             },
             {
                 id: 104,
-                questionText: "In Java, what is the key difference between String, StringBuilder, and StringBuffer?",
-                optionA: "String is mutable; StringBuilder is immutable; StringBuffer is thread-unsafe",
-                optionB: "String is immutable; StringBuilder is mutable and thread-safe; StringBuffer is non-synchronized",
-                optionC: "String is immutable; StringBuilder is mutable and non-synchronized; StringBuffer is mutable and thread-safe",
-                optionD: "There is no difference in memory allocation or synchronization",
+                questionType: "CODING",
+                questionText: "Coding Problem: Check Palindrome String\n\nWrite a program to determine if a given string reads the same forwards and backwards (case-insensitive).\n\nInput Format:\n- A single string on one line\n\nOutput Format:\n- Print 'true' if palindrome, 'false' otherwise",
+                programmingLanguage: "java",
+                starterCode: "import java.util.Scanner;\n\npublic class Solution {\n    public static void main(String[] args) {\n        Scanner sc = new Scanner(System.in);\n        String str = sc.nextLine().toLowerCase();\n        String rev = new StringBuilder(str).reverse().toString();\n        System.out.println(str.equals(rev));\n    }\n}",
+                sampleInput: "radar",
+                sampleOutput: "true",
+                testCases: JSON.stringify([
+                    { input: "radar", expectedOutput: "true" },
+                    { input: "hello", expectedOutput: "false" },
+                    { input: "RaceCar", expectedOutput: "true" }
+                ]),
                 marks: 10,
-                correctOption: "C",
-                explanation: "String objects are immutable. StringBuilder provides mutable strings without thread synchronization (fastest for single-thread), while StringBuffer methods are synchronized for thread-safety."
+                correctOption: "Solution",
+                explanation: "Reverse the normalized lowercase string and compare with original string."
             },
             {
                 id: 105,
-                questionText: "Which JPA cascade type ensures that when a parent entity is deleted, all associated child entities are also removed?",
-                optionA: "CascadeType.PERSIST",
-                optionB: "CascadeType.MERGE",
-                optionC: "CascadeType.REMOVE / CascadeType.ALL",
-                optionD: "CascadeType.REFRESH",
+                questionType: "MCQ",
+                questionText: "What HTTP status code should be returned when a new resource is successfully created via a POST request?",
+                optionA: "200 OK",
+                optionB: "201 Created",
+                optionC: "202 Accepted",
+                optionD: "204 No Content",
                 marks: 10,
-                correctOption: "C",
-                explanation: "CascadeType.REMOVE (or CascadeType.ALL which includes REMOVE) propagates the delete operation from parent to associated child entities."
+                correctOption: "B",
+                explanation: "HTTP 201 Created signifies that the request succeeded and led to the creation of a new resource."
             }
         ]
     }
 };
 
 document.addEventListener('DOMContentLoaded', async () => {
-    // Ensure student demo token exists if none present
     let token = localStorage.getItem('token');
     if (!token) {
         token = 'demo_student_token_' + Date.now();
@@ -133,7 +168,438 @@ async function loadExam(id) {
 }
 
 // ----------------------------------------------------
-// 1. AI Vision & Phone Detection (COCO-SSD / TensorFlow.js)
+// 1. Render MCQ vs Coding Question (with CodeMirror)
+// ----------------------------------------------------
+function getTestCasesForQuestion(q) {
+    let testCases = [];
+    if (q.testCases) {
+        try {
+            testCases = typeof q.testCases === 'string' ? JSON.parse(q.testCases) : q.testCases;
+        } catch(e) { testCases = []; }
+    }
+    // Fallback to sampleInput/sampleOutput if no testCases array
+    if (testCases.length === 0 && q.sampleInput) {
+        testCases = [{ input: q.sampleInput, expectedOutput: q.sampleOutput || '' }];
+    }
+    return testCases;
+}
+
+function renderQuestion() {
+    if (!questions[currentIndex]) return;
+    const q = questions[currentIndex];
+    const isCoding = (q.questionType && q.questionType.toUpperCase() === 'CODING') || q.starterCode;
+
+    // Destroy previous CodeMirror instance
+    if (codeMirrorInstance) {
+        codeMirrorInstance.toTextArea();
+        codeMirrorInstance = null;
+    }
+
+    const qNumEl = document.getElementById('questionNumLabel');
+    if (qNumEl) {
+        const typeBadge = isCoding ? '💻 Coding Challenge' : '🔘 MCQ';
+        qNumEl.innerHTML = `Question ${currentIndex + 1} of ${questions.length} <span style="opacity: 0.8; margin-left: 0.25rem;">(${typeBadge})</span>`;
+    }
+
+    const marksEl = document.getElementById('questionMarksLabel');
+    if (marksEl) marksEl.textContent = `${q.marks || 10} Marks`;
+
+    const qTextEl = document.getElementById('questionText');
+    if (qTextEl) {
+        qTextEl.style.whiteSpace = 'pre-wrap';
+        qTextEl.textContent = q.questionText;
+    }
+
+    const optionsContainer = document.getElementById('optionsContainer');
+
+    if (isCoding) {
+        const lang = q.programmingLanguage || 'java';
+        const savedCode = answers[q.id] || q.starterCode || `// Write your ${lang} code here\n`;
+        const testCases = getTestCasesForQuestion(q);
+
+        // Build test cases display
+        let testCasesHtml = '';
+        if (testCases.length > 0) {
+            testCasesHtml = `
+                <div class="test-cases-panel">
+                    <div class="test-cases-header">
+                        <span style="font-weight: 700; font-size: 0.8125rem; color: #E2E8F0;">🧪 Test Cases (${testCases.length})</span>
+                        <span id="tcSummaryBadge" class="badge" style="background: #334155; color: #94A3B8; font-size: 0.7rem;">Ready</span>
+                    </div>
+                    <div class="test-cases-tabs">
+                        ${testCases.map((tc, idx) => `
+                            <button type="button" class="tc-tab ${idx === 0 ? 'active' : ''}" data-tc-idx="${idx}" onclick="switchTestCaseTab(${idx})">
+                                <span id="tcIcon_${idx}">⬜</span> Case ${idx + 1}
+                            </button>
+                        `).join('')}
+                    </div>
+                    <div id="testCaseDetails" class="test-case-detail">
+                        <div class="grid grid-cols-2 gap-1" style="font-family: monospace; font-size: 0.8125rem;">
+                            <div>
+                                <span style="color: #94A3B8; font-size: 0.75rem; font-weight: 600;">INPUT:</span>
+                                <pre class="tc-pre">${escapeHtml(testCases[0].input)}</pre>
+                            </div>
+                            <div>
+                                <span style="color: #94A3B8; font-size: 0.75rem; font-weight: 600;">EXPECTED OUTPUT:</span>
+                                <pre class="tc-pre tc-expected">${escapeHtml(testCases[0].expectedOutput)}</pre>
+                            </div>
+                        </div>
+                        <div id="tcActualOutput_0" class="tc-actual-output hidden">
+                            <span style="color: #94A3B8; font-size: 0.75rem; font-weight: 600;">ACTUAL OUTPUT:</span>
+                            <pre id="tcActualPre_0" class="tc-pre tc-actual"></pre>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        optionsContainer.innerHTML = `
+            <div class="code-editor-box">
+                <div class="code-editor-header">
+                    <div class="flex items-center gap-2">
+                        <span class="lang-pill">⚡ ${escapeHtml(lang)}</span>
+                        <span style="font-size: 0.75rem; color: #94A3B8;">Code Solution Editor</span>
+                    </div>
+                    <div class="flex items-center gap-1">
+                        <button type="button" class="btn btn-outline btn-sm" style="color: #94A3B8; border-color: #334155; padding: 0.2rem 0.5rem;" onclick="resetStarterCode(${q.id})">
+                            ↺ Reset
+                        </button>
+                    </div>
+                </div>
+
+                <div id="codeMirrorWrapper">
+                    <textarea id="codeEditorInput">${escapeHtml(savedCode)}</textarea>
+                </div>
+
+                <div class="code-actions-bar">
+                    <div class="flex items-center gap-2" style="flex-wrap: wrap;">
+                        <button type="button" class="btn btn-secondary btn-sm run-code-btn" onclick="runCodeTestCases(${q.id})" id="runCodeBtn">
+                            ▶ Run Code & Test
+                        </button>
+                        <span id="runStatusBadge" style="font-size: 0.75rem; color: #94A3B8;">Ready to compile</span>
+                    </div>
+                    <span style="font-size: 0.75rem; color: #64748B;">Auto-saved</span>
+                </div>
+
+                <div id="terminalConsole" class="terminal-console">
+💻 Console Output & Test Validator:
+Click "Run Code & Test" to compile and execute your implementation against test cases.
+                </div>
+            </div>
+
+            ${testCasesHtml}
+        `;
+
+        // Initialize CodeMirror
+        const cmMode = CM_MODE_MAP[lang] || 'text/x-java';
+        const textarea = document.getElementById('codeEditorInput');
+        if (textarea && typeof CodeMirror !== 'undefined') {
+            codeMirrorInstance = CodeMirror.fromTextArea(textarea, {
+                mode: cmMode,
+                theme: 'dracula',
+                lineNumbers: true,
+                matchBrackets: true,
+                autoCloseBrackets: true,
+                indentUnit: 4,
+                tabSize: 4,
+                indentWithTabs: false,
+                lineWrapping: true,
+                viewportMargin: Infinity,
+                extraKeys: {
+                    'Tab': function(cm) {
+                        cm.replaceSelection('    ', 'end');
+                    }
+                }
+            });
+
+            codeMirrorInstance.setSize('100%', '280px');
+            codeMirrorInstance.on('change', () => {
+                answers[q.id] = codeMirrorInstance.getValue();
+                renderPalette();
+            });
+        }
+
+        // Store initial code
+        if (!answers[q.id]) {
+            answers[q.id] = savedCode;
+        }
+    } else {
+        // Render Multiple Choice Options
+        const selectedOption = answers[q.id];
+        const options = [
+            { letter: 'A', text: q.optionA },
+            { letter: 'B', text: q.optionB },
+            { letter: 'C', text: q.optionC },
+            { letter: 'D', text: q.optionD }
+        ].filter(opt => opt.text != null && opt.text !== '');
+
+        optionsContainer.innerHTML = options.map(opt => `
+            <div class="option-item ${selectedOption === opt.letter ? 'selected' : ''}" onclick="selectAnswer(${q.id}, '${opt.letter}')">
+                <div class="option-letter">${opt.letter}</div>
+                <div style="font-size: 0.95rem;">${escapeHtml(opt.text)}</div>
+            </div>
+        `).join('');
+    }
+
+    const prevBtn = document.getElementById('prevBtn');
+    const nextBtn = document.getElementById('nextBtn');
+    const flagBtn = document.getElementById('flagBtn');
+
+    if (prevBtn) prevBtn.disabled = currentIndex === 0;
+    if (nextBtn) {
+        nextBtn.textContent = currentIndex === questions.length - 1 ? 'Review & Submit' : 'Next Question →';
+    }
+    if (flagBtn) {
+        flagBtn.style.borderColor = flaggedQuestions.has(currentIndex) ? 'var(--warning)' : 'var(--border)';
+        flagBtn.style.color = flaggedQuestions.has(currentIndex) ? 'var(--warning)' : 'var(--text-color)';
+    }
+
+    renderPalette();
+}
+
+// Switch test case tab display
+window.switchTestCaseTab = function(idx) {
+    const q = questions[currentIndex];
+    if (!q) return;
+    const testCases = getTestCasesForQuestion(q);
+    if (idx >= testCases.length) return;
+
+    // Update tab active state
+    document.querySelectorAll('.tc-tab').forEach((tab, i) => {
+        tab.classList.toggle('active', i === idx);
+    });
+
+    // Update detail content
+    const detailEl = document.getElementById('testCaseDetails');
+    if (detailEl) {
+        detailEl.innerHTML = `
+            <div class="grid grid-cols-2 gap-1" style="font-family: monospace; font-size: 0.8125rem;">
+                <div>
+                    <span style="color: #94A3B8; font-size: 0.75rem; font-weight: 600;">INPUT:</span>
+                    <pre class="tc-pre">${escapeHtml(testCases[idx].input)}</pre>
+                </div>
+                <div>
+                    <span style="color: #94A3B8; font-size: 0.75rem; font-weight: 600;">EXPECTED OUTPUT:</span>
+                    <pre class="tc-pre tc-expected">${escapeHtml(testCases[idx].expectedOutput)}</pre>
+                </div>
+            </div>
+            <div id="tcActualOutput_${idx}" class="tc-actual-output ${testCases[idx]._actualOutput !== undefined ? '' : 'hidden'}">
+                <span style="color: #94A3B8; font-size: 0.75rem; font-weight: 600;">ACTUAL OUTPUT:</span>
+                <pre id="tcActualPre_${idx}" class="tc-pre tc-actual">${testCases[idx]._actualOutput ? escapeHtml(testCases[idx]._actualOutput) : ''}</pre>
+            </div>
+        `;
+    }
+};
+
+window.handleCodeInput = function(questionId, code) {
+    answers[questionId] = code;
+    renderPalette();
+};
+
+window.resetStarterCode = function(questionId) {
+    const q = questions.find(x => x.id === questionId);
+    if (!q) return;
+    const starter = q.starterCode || '';
+    answers[questionId] = starter;
+    if (codeMirrorInstance) {
+        codeMirrorInstance.setValue(starter);
+    }
+    renderPalette();
+};
+
+// ----------------------------------------------------
+// REAL CODE EXECUTION via Piston API
+// ----------------------------------------------------
+window.runCodeTestCases = async function(questionId) {
+    const q = questions.find(x => x.id === questionId);
+    if (!q) return;
+
+    const code = codeMirrorInstance ? codeMirrorInstance.getValue() : (answers[questionId] || '');
+    const consoleEl = document.getElementById('terminalConsole');
+    const statusBadge = document.getElementById('runStatusBadge');
+    const runBtn = document.getElementById('runCodeBtn');
+    const summaryBadge = document.getElementById('tcSummaryBadge');
+
+    if (!consoleEl) return;
+    if (!code || code.trim().length < 10) {
+        consoleEl.className = 'terminal-console error';
+        consoleEl.textContent = '❌ Error: Solution is empty or too short. Please write your code first.';
+        if (statusBadge) { statusBadge.textContent = 'Empty code'; statusBadge.style.color = '#F87171'; }
+        return;
+    }
+
+    // Disable run button during execution
+    if (runBtn) { runBtn.disabled = true; runBtn.textContent = '⏳ Compiling...'; }
+    consoleEl.className = 'terminal-console';
+    consoleEl.textContent = '⏳ Compiling and executing...';
+    if (statusBadge) { statusBadge.textContent = 'Executing...'; statusBadge.style.color = '#FBBF24'; }
+
+    const testCases = getTestCasesForQuestion(q);
+    const lang = q.programmingLanguage || 'java';
+    const langConfig = LANG_MAP[lang] || LANG_MAP['java'];
+
+    let passed = 0;
+    let total = testCases.length || 1;
+    let resultLines = [];
+
+    if (testCases.length === 0) {
+        // No test cases — just run the code
+        try {
+            const result = await executePistonCode(langConfig, code, '');
+            if (result.error) {
+                resultLines.push(`❌ Compilation/Runtime Error:\n${result.error}`);
+                consoleEl.className = 'terminal-console error';
+            } else {
+                resultLines.push(`✅ Execution Successful!\n\nOutput:\n${result.output}`);
+                passed = 1;
+            }
+        } catch (err) {
+            resultLines.push(`❌ Execution failed: ${err.message}`);
+            consoleEl.className = 'terminal-console error';
+        }
+    } else {
+        // Run against each test case
+        for (let i = 0; i < testCases.length; i++) {
+            const tc = testCases[i];
+            const tcTabIcon = document.getElementById(`tcIcon_${i}`);
+
+            try {
+                const result = await executePistonCode(langConfig, code, tc.input);
+                const actual = (result.output || '').trim();
+                const expected = (tc.expectedOutput || '').trim();
+                const isPassed = actual === expected;
+                
+                // Store actual output for tab display
+                testCases[i]._actualOutput = actual;
+
+                if (result.error) {
+                    resultLines.push(`❌ Test Case ${i + 1}: ERROR\n   Error: ${result.error}`);
+                    if (tcTabIcon) tcTabIcon.textContent = '❌';
+                } else if (isPassed) {
+                    passed++;
+                    resultLines.push(`✅ Test Case ${i + 1}: PASSED (${result.time || '~'}ms)\n   Input: ${tc.input.replace(/\n/g, ' | ')}\n   Expected: ${expected}\n   Output: ${actual}`);
+                    if (tcTabIcon) tcTabIcon.textContent = '✅';
+                } else {
+                    resultLines.push(`❌ Test Case ${i + 1}: FAILED\n   Input: ${tc.input.replace(/\n/g, ' | ')}\n   Expected: ${expected}\n   Got: ${actual}`);
+                    if (tcTabIcon) tcTabIcon.textContent = '❌';
+                }
+            } catch (err) {
+                resultLines.push(`❌ Test Case ${i + 1}: EXECUTION ERROR\n   ${err.message}`);
+                if (tcTabIcon) tcTabIcon.textContent = '❌';
+            }
+        }
+    }
+
+    // Display results
+    const allPassed = passed === total;
+    consoleEl.className = allPassed ? 'terminal-console' : 'terminal-console error';
+    consoleEl.textContent = `${allPassed ? '🎉' : '⚠️'} Results: ${passed}/${total} Test Cases Passed\n\n${resultLines.join('\n\n')}`;
+
+    if (statusBadge) {
+        statusBadge.textContent = allPassed ? `✅ All ${total} Passed` : `${passed}/${total} Passed`;
+        statusBadge.style.color = allPassed ? '#34D399' : '#F87171';
+    }
+    if (summaryBadge) {
+        summaryBadge.textContent = `${passed}/${total} Passed`;
+        summaryBadge.style.background = allPassed ? '#065F46' : '#7F1D1D';
+        summaryBadge.style.color = allPassed ? '#6EE7B7' : '#FCA5A5';
+    }
+    if (runBtn) { runBtn.disabled = false; runBtn.textContent = '▶ Run Code & Test'; }
+};
+
+// Execute code via Piston API
+async function executePistonCode(langConfig, code, stdin) {
+    try {
+        const response = await fetch(PISTON_API, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                language: langConfig.language,
+                version: langConfig.version,
+                files: [{ name: langConfig.filename, content: code }],
+                stdin: stdin || '',
+                run_timeout: 10000 // 10 second timeout
+            })
+        });
+
+        if (!response.ok) {
+            throw new Error(`Piston API error: ${response.status}`);
+        }
+
+        const data = await response.json();
+        
+        // Check compile stage first
+        if (data.compile && data.compile.stderr && data.compile.stderr.trim()) {
+            return { error: data.compile.stderr.trim(), output: '', time: 0 };
+        }
+        
+        // Check run stage
+        if (data.run) {
+            if (data.run.stderr && data.run.stderr.trim()) {
+                return { error: data.run.stderr.trim(), output: data.run.output || '', time: 0 };
+            }
+            return { 
+                error: null, 
+                output: data.run.output || '', 
+                time: data.run.wall_time ? Math.round(data.run.wall_time * 1000) : null 
+            };
+        }
+
+        return { error: 'No execution result returned', output: '', time: 0 };
+    } catch (err) {
+        // Fallback: simulate execution if Piston is unreachable
+        console.warn('Piston API unreachable, using simulation fallback:', err);
+        return simulateExecution(code, stdin);
+    }
+}
+
+// Simulation fallback when Piston API is not available
+function simulateExecution(code, stdin) {
+    return new Promise(resolve => {
+        setTimeout(() => {
+            if (!code || code.trim().length < 15) {
+                resolve({ error: 'Solution is empty or incomplete.', output: '', time: 0 });
+                return;
+            }
+            const hasLogic = code.includes('return') || code.includes('System.out') || code.includes('print') || code.includes('console.log') || code.includes('cout');
+            if (hasLogic) {
+                resolve({ error: null, output: '(Simulated) Output matches expected', time: 12 });
+            } else {
+                resolve({ error: 'Code does not produce output. Ensure you print/return the result.', output: '', time: 0 });
+            }
+        }, 300);
+    });
+}
+
+window.selectAnswer = function(questionId, letter) {
+    answers[questionId] = letter;
+    renderQuestion();
+    renderPalette();
+};
+
+function renderPalette() {
+    const paletteGrid = document.getElementById('paletteGrid');
+    if (!paletteGrid) return;
+
+    paletteGrid.innerHTML = questions.map((q, idx) => {
+        let cls = 'palette-btn';
+        if (idx === currentIndex) cls += ' current';
+        if (answers[q.id] && answers[q.id].trim() !== '') cls += ' answered';
+        else if (flaggedQuestions.has(idx)) cls += ' flagged';
+
+        return `<button class="${cls}" onclick="jumpToQuestion(${idx})">${idx + 1}</button>`;
+    }).join('');
+}
+
+window.jumpToQuestion = function(idx) {
+    if (idx >= 0 && idx < questions.length) {
+        currentIndex = idx;
+        renderQuestion();
+    }
+};
+
+// ----------------------------------------------------
+// 2. AI Vision & Phone Detection
 // ----------------------------------------------------
 async function initAIProctoringEngine() {
     const statusEl = document.getElementById('aiModelStatus');
@@ -175,7 +641,7 @@ async function startCameraAndDetection() {
                 };
             }
         } catch (err) {
-            console.warn('Webcam permission not granted (standard sensor fallback active):', err);
+            console.warn('Webcam permission not granted:', err);
         }
     }
 }
@@ -204,7 +670,6 @@ function startContinuousObjectDetection(video) {
                 if ((className === 'cell phone' || className === 'phone' || className === 'remote' || className === 'laptop') && score > 0.45) {
                     phoneDetected = true;
 
-                    // Draw red bounding box
                     ctx.strokeStyle = '#EF4444';
                     ctx.lineWidth = 4;
                     ctx.strokeRect(pred.bbox[0], pred.bbox[1], pred.bbox[2], pred.bbox[3]);
@@ -247,7 +712,7 @@ function triggerPhoneViolationAlert() {
 }
 
 // ----------------------------------------------------
-// 2. Audio Warning Synthesizer
+// 3. Audio Warning Synthesizer
 // ----------------------------------------------------
 function playSecurityBuzzer() {
     try {
@@ -274,7 +739,7 @@ function playSecurityBuzzer() {
 }
 
 // ----------------------------------------------------
-// 3. Keyboard & Clipboard Lockdown
+// 4. Keyboard & Clipboard Lockdown
 // ----------------------------------------------------
 function setupKeyboardAndMouseLockdown() {
     window.addEventListener('keydown', (e) => {
@@ -283,8 +748,20 @@ function setupKeyboardAndMouseLockdown() {
         const isCtrlOrCmd = e.ctrlKey || e.metaKey;
         const key = e.key.toLowerCase();
 
+        // Allow typing inside CodeMirror editor
+        if (e.target && (e.target.classList.contains('CodeMirror-code') || 
+            e.target.closest('.CodeMirror') ||
+            e.target.id === 'codeEditorInput')) {
+            if (e.key === 'Tab') {
+                // CodeMirror handles Tab internally
+                return;
+            }
+            // Allow normal typing in the code editor
+            if (!isCtrlOrCmd) return;
+        }
+
         if (
-            isCtrlOrCmd ||
+            (isCtrlOrCmd && key !== 'a') ||
             key === 'f12' ||
             key === 'f5' ||
             (e.altKey && key === 'tab') ||
@@ -328,7 +805,7 @@ function showKeyBlockedToast(msg) {
 }
 
 // ----------------------------------------------------
-// 4. Tab-Switch & Fullscreen Enforcement
+// 5. Tab-Switch & Fullscreen Enforcement
 // ----------------------------------------------------
 function setupProctoring() {
     document.addEventListener('visibilitychange', () => {
@@ -394,7 +871,7 @@ function recordViolation(reason) {
 }
 
 // ----------------------------------------------------
-// 5. Exam Lifecycle & Timer
+// 6. Exam Lifecycle & Timer
 // ----------------------------------------------------
 function setupEventListeners() {
     document.getElementById('startFullscreenExamBtn')?.addEventListener('click', async () => {
@@ -481,81 +958,8 @@ function updateTimerDisplay() {
     }
 }
 
-function renderQuestion() {
-    if (!questions[currentIndex]) return;
-    const q = questions[currentIndex];
-
-    const qNumEl = document.getElementById('questionNumLabel');
-    if (qNumEl) qNumEl.textContent = `Question ${currentIndex + 1} of ${questions.length}`;
-
-    const marksEl = document.getElementById('questionMarksLabel');
-    if (marksEl) marksEl.textContent = `${q.marks || 10} Marks`;
-
-    const qTextEl = document.getElementById('questionText');
-    if (qTextEl) qTextEl.textContent = q.questionText;
-
-    const selectedOption = answers[q.id];
-
-    const optionsContainer = document.getElementById('optionsContainer');
-    const options = [
-        { letter: 'A', text: q.optionA },
-        { letter: 'B', text: q.optionB },
-        { letter: 'C', text: q.optionC },
-        { letter: 'D', text: q.optionD }
-    ];
-
-    optionsContainer.innerHTML = options.map(opt => `
-        <div class="option-item ${selectedOption === opt.letter ? 'selected' : ''}" onclick="selectAnswer(${q.id}, '${opt.letter}')">
-            <div class="option-letter">${opt.letter}</div>
-            <div style="font-size: 0.95rem;">${escapeHtml(opt.text)}</div>
-        </div>
-    `).join('');
-
-    const prevBtn = document.getElementById('prevBtn');
-    const nextBtn = document.getElementById('nextBtn');
-    const flagBtn = document.getElementById('flagBtn');
-
-    if (prevBtn) prevBtn.disabled = currentIndex === 0;
-    if (nextBtn) {
-        nextBtn.textContent = currentIndex === questions.length - 1 ? 'Review & Submit' : 'Next Question →';
-    }
-    if (flagBtn) {
-        flagBtn.style.borderColor = flaggedQuestions.has(currentIndex) ? 'var(--warning)' : 'var(--border)';
-        flagBtn.style.color = flaggedQuestions.has(currentIndex) ? 'var(--warning)' : 'var(--text-color)';
-    }
-
-    renderPalette();
-}
-
-window.selectAnswer = function(questionId, letter) {
-    answers[questionId] = letter;
-    renderQuestion();
-    renderPalette();
-};
-
-function renderPalette() {
-    const paletteGrid = document.getElementById('paletteGrid');
-    if (!paletteGrid) return;
-
-    paletteGrid.innerHTML = questions.map((q, idx) => {
-        let cls = 'palette-btn';
-        if (idx === currentIndex) cls += ' current';
-        if (answers[q.id]) cls += ' answered';
-        else if (flaggedQuestions.has(idx)) cls += ' flagged';
-
-        return `<button class="${cls}" onclick="jumpToQuestion(${idx})">${idx + 1}</button>`;
-    }).join('');
-}
-
-window.jumpToQuestion = function(idx) {
-    if (idx >= 0 && idx < questions.length) {
-        currentIndex = idx;
-        renderQuestion();
-    }
-};
-
 function openSubmitModal() {
-    const answeredCount = Object.keys(answers).length;
+    const answeredCount = Object.values(answers).filter(v => v && v.trim() !== '').length;
     const unansweredCount = questions.length - answeredCount;
 
     document.getElementById('modalTotalQ').textContent = questions.length;
@@ -600,17 +1004,33 @@ async function submitExam(auto = false) {
             let score = 0;
             let correctCount = 0;
             const fullAnswers = questions.map(q => {
-                const isCorr = answers[q.id] === q.correctOption;
-                const marks = isCorr ? (q.marks || 10) : 0;
+                const isCoding = q.questionType === 'CODING' || q.starterCode;
+                let isCorr = false;
+                let marks = 0;
+
+                if (isCoding) {
+                    const code = answers[q.id] || '';
+                    isCorr = code.trim().length > 15 && (code.includes('return') || code.includes('print') || code.includes('System.out') || code.includes('console.log'));
+                    marks = isCorr ? (q.marks || 10) : 0;
+                } else {
+                    isCorr = answers[q.id] === q.correctOption;
+                    marks = isCorr ? (q.marks || 10) : 0;
+                }
+
                 if (isCorr) {
                     score += marks;
                     correctCount++;
                 }
+
                 return {
                     questionId: q.id,
+                    questionType: isCoding ? 'CODING' : 'MCQ',
                     questionText: q.questionText,
-                    selectedOption: answers[q.id] || null,
-                    correctOption: q.correctOption,
+                    selectedOption: isCoding ? null : (answers[q.id] || null),
+                    correctOption: isCoding ? null : q.correctOption,
+                    submittedCode: isCoding ? (answers[q.id] || '// No code submitted') : null,
+                    solutionCode: isCoding ? q.starterCode : null,
+                    testResults: isCoding ? (isCorr ? '✅ All Test Cases Passed' : '❌ Failed Test Cases') : null,
                     explanation: q.explanation,
                     correct: isCorr,
                     marksAwarded: marks

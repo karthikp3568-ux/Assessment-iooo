@@ -47,7 +47,7 @@ public class DataInitializer implements CommandLineRunner {
         if (assessmentRepository.count() == 0) {
             Assessment javaExam = Assessment.builder()
                     .title("Java Core & Spring Boot Master Exam")
-                    .description("Comprehensive test evaluating Java fundamentals, OOP, Collections, Multithreading, REST APIs, and Spring Security architecture.")
+                    .description("Comprehensive test evaluating Java fundamentals, OOP, Collections, Multithreading, REST APIs, and hands-on coding challenges.")
                     .category("Java & Backend")
                     .durationMinutes(45)
                     .totalMarks(50)
@@ -58,8 +58,10 @@ public class DataInitializer implements CommandLineRunner {
                     .build();
 
             List<Question> javaQuestions = List.of(
+                    // MCQ 1
                     Question.builder()
                             .assessment(javaExam)
+                            .questionType("MCQ")
                             .questionText("Which Java Collection interface allows duplicate elements and maintains insertion order?")
                             .optionA("Set")
                             .optionB("List")
@@ -69,8 +71,24 @@ public class DataInitializer implements CommandLineRunner {
                             .marks(10)
                             .explanation("List allows duplicate elements and guarantees positional access and insertion order preservation.")
                             .build(),
+                    // Coding Challenge 1
                     Question.builder()
                             .assessment(javaExam)
+                            .questionType("CODING")
+                            .questionText("Coding Problem: Find Maximum in Array\n\nImplement a method that takes an integer array and returns the largest element.\n\nExample:\nInput: [3, 7, 2, 9, 5]\nOutput: 9")
+                            .programmingLanguage("java")
+                            .starterCode("public class Solution {\n    public static int findMax(int[] arr) {\n        // Write your solution here\n        int max = arr[0];\n        for (int num : arr) {\n            if (num > max) max = num;\n        }\n        return max;\n    }\n}")
+                            .sampleInput("[3, 7, 2, 9, 5]")
+                            .sampleOutput("9")
+                            .testCases("[{\"input\": \"[3, 7, 2, 9, 5]\", \"output\": \"9\"}, {\"input\": \"[-5, -1, -10]\", \"output\": \"-1\"}]")
+                            .solutionCode("public class Solution {\n    public static int findMax(int[] arr) {\n        int max = arr[0];\n        for (int n : arr) if (n > max) max = n;\n        return max;\n    }\n}")
+                            .marks(10)
+                            .explanation("Iterate through the array while maintaining the current maximum value seen so far. Time complexity is O(N).")
+                            .build(),
+                    // MCQ 2
+                    Question.builder()
+                            .assessment(javaExam)
+                            .questionType("MCQ")
                             .questionText("In Spring Boot, which annotation is used to designate a class as a global exception handler for REST controllers?")
                             .optionA("@ExceptionHandler")
                             .optionB("@ControllerAdvice / @RestControllerAdvice")
@@ -80,8 +98,24 @@ public class DataInitializer implements CommandLineRunner {
                             .marks(10)
                             .explanation("@RestControllerAdvice combines @ControllerAdvice and @ResponseBody to handle exceptions across all controllers globally.")
                             .build(),
+                    // Coding Challenge 2
                     Question.builder()
                             .assessment(javaExam)
+                            .questionType("CODING")
+                            .questionText("Coding Problem: Check Palindrome String\n\nWrite a method to determine if a given string reads the same forwards and backwards (case-insensitive).\n\nExample:\nInput: \"radar\"\nOutput: true")
+                            .programmingLanguage("java")
+                            .starterCode("public class Solution {\n    public static boolean isPalindrome(String str) {\n        // Write your solution here\n        String clean = str.toLowerCase();\n        return clean.equals(new StringBuilder(clean).reverse().toString());\n    }\n}")
+                            .sampleInput("\"radar\"")
+                            .sampleOutput("true")
+                            .testCases("[{\"input\": \"\\\"radar\\\"\", \"output\": \"true\"}, {\"input\": \"\\\"hello\\\"\", \"output\": \"false\"}]")
+                            .solutionCode("public class Solution {\n    public static boolean isPalindrome(String s) {\n        String clean = s.toLowerCase();\n        return clean.equals(new StringBuilder(clean).reverse().toString());\n    }\n}")
+                            .marks(10)
+                            .explanation("Reverse the normalized lowercase string and compare with original string.")
+                            .build(),
+                    // MCQ 3
+                    Question.builder()
+                            .assessment(javaExam)
+                            .questionType("MCQ")
                             .questionText("What HTTP status code should be returned when a new resource is successfully created via a POST request?")
                             .optionA("200 OK")
                             .optionB("201 Created")
@@ -90,28 +124,6 @@ public class DataInitializer implements CommandLineRunner {
                             .correctOption("B")
                             .marks(10)
                             .explanation("HTTP 201 Created signifies that the request succeeded and led to the creation of a new resource.")
-                            .build(),
-                    Question.builder()
-                            .assessment(javaExam)
-                            .questionText("Which garbage collector in modern Java provides ultra-low pause times regardless of heap size?")
-                            .optionA("Serial GC")
-                            .optionB("Parallel GC")
-                            .optionC("ZGC (Z Garbage Collector)")
-                            .optionD("CMS (Concurrent Mark Sweep)")
-                            .correctOption("C")
-                            .marks(10)
-                            .explanation("ZGC is a scalable low-latency garbage collector capable of handling terabytes of memory with sub-millisecond pauses.")
-                            .build(),
-                    Question.builder()
-                            .assessment(javaExam)
-                            .questionText("In Spring Security, what is the default session creation policy recommended for stateless REST APIs using JWT tokens?")
-                            .optionA("SessionCreationPolicy.ALWAYS")
-                            .optionB("SessionCreationPolicy.IF_REQUIRED")
-                            .optionC("SessionCreationPolicy.STATELESS")
-                            .optionD("SessionCreationPolicy.NEVER")
-                            .correctOption("C")
-                            .marks(10)
-                            .explanation("SessionCreationPolicy.STATELESS instructs Spring Security to never create or use HTTP sessions to store SecurityContext.")
                             .build()
             );
             javaExam.getQuestions().addAll(javaQuestions);
@@ -119,7 +131,7 @@ public class DataInitializer implements CommandLineRunner {
 
             Assessment iotExam = Assessment.builder()
                     .title("IoT & Embedded Systems Fundamentals")
-                    .description("Assessment on microcontroller architectures, communication protocols (MQTT, HTTP, CoAP), sensor interfacing, and edge computing.")
+                    .description("Assessment on microcontroller architectures, communication protocols (MQTT, HTTP, CoAP), sensor interfacing, and edge programming.")
                     .category("IoT & Hardware")
                     .durationMinutes(30)
                     .totalMarks(40)
@@ -132,6 +144,7 @@ public class DataInitializer implements CommandLineRunner {
             List<Question> iotQuestions = List.of(
                     Question.builder()
                             .assessment(iotExam)
+                            .questionType("MCQ")
                             .questionText("Which lightweight publish-subscribe network protocol is most widely used for IoT messaging over TCP/IP?")
                             .optionA("HTTP/2")
                             .optionB("MQTT")
@@ -139,40 +152,44 @@ public class DataInitializer implements CommandLineRunner {
                             .optionD("SNMP")
                             .correctOption("B")
                             .marks(10)
-                            .explanation("MQTT (Message Queuing Telemetry Transport) is an ISO standard publish-subscribe-based messaging protocol designed for constrained devices.")
+                            .explanation("MQTT is designed for constrained devices and low-bandwidth high-latency networks.")
                             .build(),
                     Question.builder()
                             .assessment(iotExam)
-                            .questionText("How many physical data lines (wires) are required for the I2C (Inter-Integrated Circuit) communication bus?")
-                            .optionA("1 line (One-Wire)")
+                            .questionType("CODING")
+                            .questionText("Coding Problem: IoT Sensor Temperature Converter\n\nWrite a function that converts a Celsius reading to Fahrenheit.\nFormula: (C * 9/5) + 32\n\nExample:\nInput: 25.0\nOutput: 77.0")
+                            .programmingLanguage("python")
+                            .starterCode("def celsius_to_fahrenheit(c: float) -> float:\n    # Write your conversion logic here\n    return (c * 9/5) + 32")
+                            .sampleInput("25.0")
+                            .sampleOutput("77.0")
+                            .testCases("[{\"input\": \"25.0\", \"output\": \"77.0\"}, {\"input\": \"0.0\", \"output\": \"32.0\"}]")
+                            .solutionCode("def celsius_to_fahrenheit(c: float) -> float:\n    return (c * 9/5) + 32")
+                            .marks(10)
+                            .explanation("Multiply Celsius temperature by 9/5 and add 32 to get Fahrenheit.")
+                            .build(),
+                    Question.builder()
+                            .assessment(iotExam)
+                            .questionType("MCQ")
+                            .questionText("How many physical data lines (wires) are required for the I2C communication bus?")
+                            .optionA("1 line")
                             .optionB("2 lines (SDA and SCL)")
-                            .optionC("4 lines (MISO, MOSI, SCK, CS)")
-                            .optionD("8 lines (Parallel)")
+                            .optionC("4 lines")
+                            .optionD("8 lines")
                             .correctOption("B")
                             .marks(10)
                             .explanation("I2C utilizes two bidirectional open-drain lines: Serial Data Line (SDA) and Serial Clock Line (SCL).")
                             .build(),
                     Question.builder()
                             .assessment(iotExam)
-                            .questionText("What is the primary advantage of ESP32 over a standard Arduino Uno (ATmega328P)?")
-                            .optionA("Lower operating voltage only")
-                            .optionB("Built-in Wi-Fi and Bluetooth with dual-core 32-bit MCU")
-                            .optionC("No requirement for firmware")
-                            .optionD("Smaller flash memory")
-                            .correctOption("B")
-                            .marks(10)
-                            .explanation("ESP32 features integrated Wi-Fi and dual-mode Bluetooth with a powerful Xtensa dual-core 32-bit processor.")
-                            .build(),
-                    Question.builder()
-                            .assessment(iotExam)
+                            .questionType("MCQ")
                             .questionText("What does QoS 1 represent in MQTT protocol message delivery?")
-                            .optionA("At most once (fire and forget)")
+                            .optionA("At most once")
                             .optionB("At least once (acknowledged delivery)")
-                            .optionC("Exactly once (assured delivery)")
+                            .optionC("Exactly once")
                             .optionD("Zero delivery")
                             .correctOption("B")
                             .marks(10)
-                            .explanation("QoS 1 guarantees that the message arrives at the receiver at least once, requiring a PUBACK response.")
+                            .explanation("QoS 1 guarantees delivery at least once with PUBACK confirmation.")
                             .build()
             );
             iotExam.getQuestions().addAll(iotQuestions);
@@ -193,6 +210,7 @@ public class DataInitializer implements CommandLineRunner {
             List<Question> cloudQuestions = List.of(
                     Question.builder()
                             .assessment(cloudExam)
+                            .questionType("MCQ")
                             .questionText("What is the smallest deployable computing unit that can be created and managed in Kubernetes?")
                             .optionA("Container")
                             .optionB("Pod")
@@ -200,10 +218,11 @@ public class DataInitializer implements CommandLineRunner {
                             .optionD("ReplicaSet")
                             .correctOption("B")
                             .marks(10)
-                            .explanation("A Pod is the basic execution unit of a Kubernetes application, encapsulating one or more containers.")
+                            .explanation("A Pod is the basic execution unit of a Kubernetes application.")
                             .build(),
                     Question.builder()
                             .assessment(cloudExam)
+                            .questionType("MCQ")
                             .questionText("In Docker, which instruction is used to set the working directory for subsequent instructions in the Dockerfile?")
                             .optionA("DIR")
                             .optionB("WORKDIR")
@@ -211,39 +230,23 @@ public class DataInitializer implements CommandLineRunner {
                             .optionD("FOLDER")
                             .correctOption("B")
                             .marks(10)
-                            .explanation("WORKDIR sets the working directory for any RUN, CMD, ENTRYPOINT, COPY and ADD instructions.")
+                            .explanation("WORKDIR sets the working directory for any RUN, CMD, ENTRYPOINT, COPY instructions.")
                             .build(),
                     Question.builder()
                             .assessment(cloudExam)
+                            .questionType("MCQ")
                             .questionText("Which principle describes infrastructure deployment managed using declarative configuration files?")
                             .optionA("Infrastructure as Code (IaC)")
                             .optionB("Monolithic Deployment")
-                            .optionC("Manual Server Provisioning")
+                            .optionC("Manual Provisioning")
                             .optionD("Stateless Networking")
                             .correctOption("A")
                             .marks(10)
-                            .explanation("Infrastructure as Code (IaC) is the management and provisioning of infrastructure through code rather than manual processes.")
+                            .explanation("Infrastructure as Code (IaC) allows provisioning infrastructure through code.")
                             .build()
             );
             cloudExam.getQuestions().addAll(cloudQuestions);
             assessmentRepository.save(cloudExam);
-
-            // 3. Seed a sample submission for the demo student
-            Submission sampleSub = Submission.builder()
-                    .student(student)
-                    .assessment(javaExam)
-                    .score(40)
-                    .totalMarks(50)
-                    .percentage(80.0)
-                    .passed(true)
-                    .totalQuestions(5)
-                    .correctAnswers(4)
-                    .violationsCount(0)
-                    .submittedAt(LocalDateTime.now().minusHours(4))
-                    .answers(new ArrayList<>())
-                    .build();
-
-            submissionRepository.save(sampleSub);
         }
     }
 }
