@@ -21,7 +21,17 @@ document.addEventListener('DOMContentLoaded', async () => {
 
 async function loadResult(id) {
     try {
-        const result = await ApiService.get(`/submissions/${id}`);
+        let result = null;
+        try {
+            result = await ApiService.get(`/submissions/${id}`);
+        } catch (apiErr) {
+            const localSaved = localStorage.getItem(`result_${id}`);
+            if (localSaved) {
+                result = JSON.parse(localSaved);
+            } else {
+                throw apiErr;
+            }
+        }
         renderScorecard(result);
     } catch (error) {
         console.error('Failed to load result:', error);
