@@ -3,14 +3,82 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Live Assessment - AssessX</title>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <title>Live Assessment - AssessX Secure Proctoring</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="css/style.css">
+    
+    <!-- TensorFlow.js & COCO-SSD for Client-side AI Phone / Object Detection -->
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.17.0/dist/tf.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/coco-ssd@2.2.3/dist/coco-ssd.min.js"></script>
 </head>
-<body style="background-color: #F1F5F9;">
-    <!-- Anti-Cheat Violation Banner (Hidden by default) -->
+<body class="exam-lockdown" style="background-color: #F1F5F9;">
+
+    <!-- Prohibited Action / Key Pressed Toast Notification -->
+    <div id="keyBlockedToast" class="key-blocked-toast hidden">
+        <span>🚫</span>
+        <span id="keyBlockedMsg">Shortcut Disabled: Ctrl/Cmd keys and copy-pasting are strictly blocked!</span>
+    </div>
+
+    <!-- Phone / Unauthorized Object Detection Alert Banner -->
+    <div id="phoneAlertBanner" class="alert alert-danger hidden" style="position: fixed; top: 1rem; left: 50%; transform: translateX(-50%); z-index: 1000; box-shadow: var(--shadow-lg); font-size: 1rem; border-width: 2px;">
+        🚨 <strong>PROCTORING VIOLATION:</strong> Mobile Phone / Unauthorized Device Detected! (<span id="phoneViolationCount">1</span>)
+    </div>
+
+    <!-- General Anti-Cheat Violation Banner -->
     <div id="violationAlert" class="alert alert-danger hidden" style="position: fixed; top: 1rem; left: 50%; transform: translateX(-50%); z-index: 999; box-shadow: var(--shadow-lg); font-size: 0.95rem;">
-        ⚠️ <strong>Proctoring Warning:</strong> Tab switch or window blur detected! Violation has been logged (<span id="violationCountBadge">1</span>).
+        ⚠️ <strong>Proctoring Warning:</strong> <span id="violationReasonText">Tab switch detected!</span> (<span id="violationCountBadge">1</span>)
+    </div>
+
+    <!-- Fullscreen & Focus Loss Lockdown Modal -->
+    <div id="lockdownOverlay" class="lockdown-overlay hidden">
+        <div style="max-width: 540px; background: #1E293B; border-radius: 1rem; padding: 2.5rem; border: 1.5px solid #EF4444; box-shadow: 0 0 40px rgba(239, 68, 68, 0.4);">
+            <div style="font-size: 3.5rem; margin-bottom: 0.5rem;">⚠️</div>
+            <h2 style="color: #F87171; margin-bottom: 0.75rem;">SECURITY LOCKDOWN ACTIVE</h2>
+            <p style="color: #CBD5E1; margin-bottom: 1.5rem; font-size: 0.95rem;" id="lockdownOverlayMsg">
+                You have navigated away from the exam window or exited fullscreen. A proctoring violation has been logged.
+            </p>
+            <div class="card mb-3" style="background: #0F172A; text-align: left; border: 1px solid #334155; font-size: 0.875rem; color: #94A3B8;">
+                <div class="flex justify-between mb-1">
+                    <span>Total Violations:</span>
+                    <strong id="lockdownViolationCount" style="color: #EF4444; font-size: 1.1rem;">1 / 5</strong>
+                </div>
+                <div style="font-size: 0.75rem; color: #64748B;">
+                    Note: Accumulating 5 violations will automatically terminate and submit your assessment.
+                </div>
+            </div>
+            <button id="resumeExamBtn" class="btn btn-primary btn-block">
+                Return to Fullscreen & Resume Exam
+            </button>
+        </div>
+    </div>
+
+    <!-- Pre-Exam Security & Fullscreen Consent Modal -->
+    <div id="startExamModal" class="modal-overlay">
+        <div class="modal-content text-center" style="max-width: 520px;">
+            <div style="font-size: 2.5rem; margin-bottom: 0.5rem;">🛡️</div>
+            <h2 class="mb-1">Secure Assessment Environment</h2>
+            <p style="color: var(--text-muted); font-size: 0.875rem;" class="mb-3">
+                AssessX AI Proctoring is actively monitoring for security and academic integrity.
+            </p>
+
+            <div class="card mb-3" style="background: var(--bg-color); text-align: left; font-size: 0.8125rem;">
+                <div class="mb-1"><strong>🔒 Strict Rules Enforced:</strong></div>
+                <ul style="padding-left: 1.25rem; color: var(--text-muted); line-height: 1.6;">
+                    <li><strong>AI Phone Detection:</strong> Mobile phones detected on camera trigger immediate violation logging.</li>
+                    <li><strong>Locked Keyboard:</strong> All Ctrl/Cmd shortcuts, copy-pasting, and right-clicks are blocked.</li>
+                    <li><strong>Fullscreen Mode:</strong> Tab switching or leaving fullscreen is recorded as a violation.</li>
+                    <li><strong>Auto-Termination:</strong> Reaching 5 violations will instantly submit your exam.</li>
+                </ul>
+            </div>
+
+            <div id="aiModelStatus" style="font-size: 0.8125rem; color: var(--primary); font-weight: 600;" class="mb-3">
+                ⏳ Initializing AI Proctoring Neural Engine...
+            </div>
+
+            <button id="startFullscreenExamBtn" class="btn btn-primary btn-block" disabled>
+                Enter Fullscreen & Begin Test
+            </button>
+        </div>
     </div>
 
     <!-- Exam Header -->
@@ -72,28 +140,29 @@
             <!-- Sidebar: Proctoring & Palette -->
             <div>
                 <!-- Smart AI Proctoring Widget -->
-                <div class="proctor-widget">
+                <div class="proctor-widget" id="proctorWidgetBox">
                     <div class="flex justify-between items-center mb-1">
                         <span style="font-size: 0.8125rem; font-weight: 700; text-transform: uppercase; color: #94A3B8;">
-                            AI Proctoring
+                            AI Vision Proctor
                         </span>
                         <span class="flex items-center gap-1" style="font-size: 0.75rem; color: #4ADE80; font-weight: 600;">
-                            <span class="rec-dot"></span> LIVE
+                            <span class="rec-dot"></span> <span id="aiVisionStatusLabel">SCANNING</span>
                         </span>
                     </div>
 
                     <div class="webcam-feed" id="webcamFeedBox">
                         <video id="webcamVideo" autoplay playsinline muted style="width: 100%; height: 100%; object-fit: cover; border-radius: 0.375rem;" class="hidden"></video>
+                        <canvas id="detectionCanvas" class="detection-canvas"></canvas>
                         <div id="webcamPlaceholder" style="text-align: center; color: #94A3B8; font-size: 0.8125rem;">
                             <div style="font-size: 1.5rem; margin-bottom: 0.25rem;">📹</div>
                             <div>Proctoring Sensor Active</div>
-                            <div style="font-size: 0.7rem; color: #64748B;">Monitoring environment</div>
+                            <div style="font-size: 0.7rem; color: #64748B;">AI Object & Phone Scanner</div>
                         </div>
                     </div>
 
                     <div class="flex justify-between items-center" style="font-size: 0.75rem; color: #94A3B8; border-top: 1px solid #334155; padding-top: 0.5rem;">
                         <span>Security Violations:</span>
-                        <span id="violationCountSidebar" style="color: #F87171; font-weight: 700;">0</span>
+                        <span id="violationCountSidebar" style="color: #F87171; font-weight: 700; font-size: 0.95rem;">0 / 5</span>
                     </div>
                 </div>
 

@@ -1,4 +1,4 @@
-// AssessX Result Scorecard Handler
+// AssessX Result Scorecard Handler with Proctoring Audit Trail
 
 document.addEventListener('DOMContentLoaded', async () => {
     const token = localStorage.getItem('token');
@@ -55,10 +55,34 @@ function renderScorecard(res) {
     document.getElementById('statAccuracy').textContent = `${res.correctAnswers} / ${res.totalQuestions}`;
 
     const violEl = document.getElementById('statViolations');
-    if ((res.violationsCount || 0) === 0) {
-        violEl.innerHTML = `<span style="color: var(--secondary); font-size: 1.25rem;">0 (Verified)</span>`;
+    const auditCard = document.getElementById('proctoringAuditCard');
+    const auditLogsList = document.getElementById('violationLogsList');
+    const auditBadge = document.getElementById('auditViolationCountBadge');
+
+    const violationsCount = res.violationsCount || 0;
+
+    if (violationsCount === 0) {
+        violEl.innerHTML = `<span style="color: var(--secondary); font-size: 1.25rem;">0 (Verified Clean)</span>`;
     } else {
-        violEl.innerHTML = `<span style="color: var(--danger); font-size: 1.25rem;">${res.violationsCount} Flagged</span>`;
+        violEl.innerHTML = `<span style="color: var(--danger); font-size: 1.25rem;">${violationsCount} Flagged</span>`;
+        
+        // Show detailed audit logs if stored
+        if (auditCard && auditLogsList) {
+            auditCard.classList.remove('hidden');
+            if (auditBadge) auditBadge.textContent = `${violationsCount} Flagged`;
+
+            let logs = [];
+            try {
+                const stored = localStorage.getItem(`violations_${res.submissionId}`);
+                if (stored) logs = JSON.parse(stored);
+            } catch (e) {}
+
+            if (logs.length === 0) {
+                logs = [`[Session Event] ${violationsCount} security/proctoring violation(s) recorded during test`];
+            }
+
+            auditLogsList.innerHTML = logs.map(l => `<div style="padding: 0.25rem 0; color: #DC2626; border-bottom: 1px dashed var(--border);">⚠️ ${escapeHtml(l)}</div>`).join('');
+        }
     }
 
     const reviewContainer = document.getElementById('answersReviewContainer');

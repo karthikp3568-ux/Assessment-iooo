@@ -59,6 +59,20 @@
                 </div>
             </div>
 
+            <!-- Proctoring Security Log Card (if violations occurred) -->
+            <div id="proctoringAuditCard" class="card mb-4 hidden" style="border-left: 4px solid var(--danger);">
+                <div class="flex justify-between items-center mb-2">
+                    <h4 style="color: var(--danger); font-size: 1.05rem;">⚠️ AI Proctoring Security Audit Trail</h4>
+                    <span class="badge badge-danger" id="auditViolationCountBadge">1 Logged</span>
+                </div>
+                <p style="color: var(--text-muted); font-size: 0.875rem; margin-bottom: 0.75rem;">
+                    The following security events were detected during the examination session:
+                </p>
+                <div id="violationLogsList" style="background: var(--bg-color); border-radius: 0.5rem; padding: 0.75rem; font-family: monospace; font-size: 0.8125rem; max-height: 180px; overflow-y: auto;">
+                    <!-- Logs generated dynamically -->
+                </div>
+            </div>
+
             <!-- Detailed Question Review -->
             <div class="card mb-4">
                 <h3 class="mb-3">Detailed Question Analysis</h3>

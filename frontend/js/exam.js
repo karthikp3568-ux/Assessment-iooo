@@ -1,4 +1,4 @@
-// AssessX Live Exam Engine & Proctoring Handler
+// AssessX Live Exam Engine with Real-Time AI Phone Detection & Strict Security Lockdown
 
 let assessment = null;
 let questions = [];
@@ -8,7 +8,14 @@ let flaggedQuestions = new Set();
 let timerInterval = null;
 let timeRemaining = 0;
 let violationsCount = 0;
+const MAX_VIOLATIONS = 5;
+let violationLogs = [];
 let hasSubmitted = false;
+let isExamStarted = false;
+let cocoModel = null;
+let detectionInterval = null;
+let audioCtx = null;
+let lastPhoneViolationTime = 0;
 
 document.addEventListener('DOMContentLoaded', async () => {
     const token = localStorage.getItem('token');
@@ -27,7 +34,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     await loadExam(assessmentId);
-    setupProctoring();
+    setupKeyboardAndMouseLockdown();
+    initAIProctoringEngine();
     setupEventListeners();
 });
 
@@ -47,14 +55,350 @@ async function loadExam(id) {
             `Category: ${assessment.category || 'General'} • Total Marks: ${assessment.totalMarks} • Duration: ${assessment.durationMinutes} mins`;
 
         timeRemaining = (assessment.durationMinutes || 30) * 60;
-        startTimer();
-        renderQuestion();
-        renderPalette();
     } catch (error) {
         console.error('Failed to load assessment:', error);
         alert('Failed to load assessment. Please try again.');
         window.location.href = 'student-dashboard.html';
     }
+}
+
+// ----------------------------------------------------
+// 1. AI Vision & Phone Detection (COCO-SSD / TensorFlow.js)
+// ----------------------------------------------------
+async function initAIProctoringEngine() {
+    const statusEl = document.getElementById('aiModelStatus');
+    const startBtn = document.getElementById('startFullscreenExamBtn');
+
+    try {
+        if (typeof cocoSsd !== 'undefined') {
+            cocoModel = await cocoSsd.load();
+            if (statusEl) {
+                statusEl.innerHTML = '✅ AI Vision & Phone Detection Engine Ready!';
+                statusEl.style.color = 'var(--secondary)';
+            }
+        } else {
+            if (statusEl) statusEl.innerHTML = '⚠️ AI Vision loaded in sensor mode.';
+        }
+    } catch (e) {
+        console.warn('AI Vision model load error (sensor fallback active):', e);
+        if (statusEl) statusEl.innerHTML = '⚠️ Proctoring sensors active (standard mode).';
+    } finally {
+        if (startBtn) startBtn.disabled = false;
+    }
+}
+
+async function startCameraAndDetection() {
+    if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+        try {
+            const stream = await navigator.mediaDevices.getUserMedia({
+                video: { width: { ideal: 640 }, height: { ideal: 480 }, facingMode: 'user' },
+                audio: false
+            });
+
+            const video = document.getElementById('webcamVideo');
+            const placeholder = document.getElementById('webcamPlaceholder');
+            if (video) {
+                video.srcObject = stream;
+                video.classList.remove('hidden');
+                if (placeholder) placeholder.classList.add('hidden');
+
+                video.onloadedmetadata = () => {
+                    video.play();
+                    startContinuousObjectDetection(video);
+                };
+            }
+        } catch (err) {
+            console.warn('Webcam permission not granted or unavailable:', err);
+        }
+    }
+}
+
+function startContinuousObjectDetection(video) {
+    const canvas = document.getElementById('detectionCanvas');
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+
+    detectionInterval = setInterval(async () => {
+        if (!cocoModel || hasSubmitted || !isExamStarted || video.paused || video.ended) return;
+
+        canvas.width = video.videoWidth || 320;
+        canvas.height = video.videoHeight || 240;
+
+        try {
+            const predictions = await cocoModel.detect(video);
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            let phoneDetected = false;
+
+            predictions.forEach(pred => {
+                const className = pred.class.toLowerCase();
+                const score = pred.score;
+
+                // Check for phone or unauthorized electronic devices
+                if ((className === 'cell phone' || className === 'phone' || className === 'remote' || className === 'laptop') && score > 0.45) {
+                    phoneDetected = true;
+
+                    // Draw red bounding box
+                    ctx.strokeStyle = '#EF4444';
+                    ctx.lineWidth = 4;
+                    ctx.strokeRect(pred.bbox[0], pred.bbox[1], pred.bbox[2], pred.bbox[3]);
+
+                    ctx.fillStyle = '#EF4444';
+                    ctx.font = 'bold 16px Inter, sans-serif';
+                    ctx.fillText(`🚨 ${pred.class.toUpperCase()} (${Math.round(score * 100)}%)`, pred.bbox[0], pred.bbox[1] > 20 ? pred.bbox[1] - 5 : 20);
+                }
+            });
+
+            if (phoneDetected) {
+                const now = Date.now();
+                // Debounce phone violations (at least 6 seconds between successive logs)
+                if (now - lastPhoneViolationTime > 6000) {
+                    lastPhoneViolationTime = now;
+                    triggerPhoneViolationAlert();
+                }
+            } else {
+                document.getElementById('proctorWidgetBox')?.classList.remove('phone-alert-flash');
+            }
+        } catch (e) {
+            // Detection cycle error ignored
+        }
+    }, 1000);
+}
+
+function triggerPhoneViolationAlert() {
+    playSecurityBuzzer();
+    const box = document.getElementById('proctorWidgetBox');
+    const banner = document.getElementById('phoneAlertBanner');
+    const countEl = document.getElementById('phoneViolationCount');
+
+    if (box) box.classList.add('phone-alert-flash');
+    if (banner) banner.classList.remove('hidden');
+
+    recordViolation('Mobile Phone / Unauthorized Device Detected by AI Camera');
+    if (countEl) countEl.textContent = violationsCount;
+
+    setTimeout(() => {
+        if (banner) banner.classList.add('hidden');
+        if (box) box.classList.remove('phone-alert-flash');
+    }, 4500);
+}
+
+// ----------------------------------------------------
+// 2. Audio Warning Synthesizer (Web Audio API)
+// ----------------------------------------------------
+function playSecurityBuzzer() {
+    try {
+        if (!audioCtx) {
+            audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        }
+        if (audioCtx.state === 'suspended') {
+            audioCtx.resume();
+        }
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = 'sawtooth';
+        osc.frequency.setValueAtTime(440, audioCtx.currentTime); // A4
+        osc.frequency.setValueAtTime(880, audioCtx.currentTime + 0.15); // A5
+
+        gain.gain.setValueAtTime(0.3, audioCtx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.4);
+
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.start();
+        osc.stop(audioCtx.currentTime + 0.45);
+    } catch (e) {}
+}
+
+// ----------------------------------------------------
+// 3. Keyboard & Clipboard Lockdown
+// ----------------------------------------------------
+function setupKeyboardAndMouseLockdown() {
+    // Block all Ctrl/Cmd combinations, F12, F5
+    window.addEventListener('keydown', (e) => {
+        if (!isExamStarted || hasSubmitted) return;
+
+        const isCtrlOrCmd = e.ctrlKey || e.metaKey;
+        const key = e.key.toLowerCase();
+
+        // Prohibited shortcuts
+        if (
+            isCtrlOrCmd || // Block ANY Ctrl or Cmd combination
+            key === 'f12' ||
+            key === 'f5' ||
+            (e.altKey && key === 'tab') ||
+            key === 'escape'
+        ) {
+            e.preventDefault();
+            e.stopPropagation();
+
+            showKeyBlockedToast(`Shortcut [${e.ctrlKey ? 'Ctrl+' : ''}${e.key.toUpperCase()}] is blocked during exams!`);
+            recordViolation(`Attempted prohibited keyboard shortcut: ${e.key.toUpperCase()}`);
+            playSecurityBuzzer();
+            return false;
+        }
+    }, true);
+
+    // Disable Right-Click Context Menu
+    document.addEventListener('contextmenu', (e) => {
+        if (!isExamStarted || hasSubmitted) return;
+        e.preventDefault();
+        showKeyBlockedToast('Right-click context menu is strictly disabled.');
+        return false;
+    });
+
+    // Disable Copy, Paste, Cut
+    ['copy', 'paste', 'cut'].forEach(evt => {
+        document.addEventListener(evt, (e) => {
+            if (!isExamStarted || hasSubmitted) return;
+            e.preventDefault();
+            showKeyBlockedToast(`Clipboard operation (${evt.toUpperCase()}) is blocked!`);
+            recordViolation(`Clipboard action attempted: ${evt}`);
+        });
+    });
+}
+
+function showKeyBlockedToast(msg) {
+    const toast = document.getElementById('keyBlockedToast');
+    const msgEl = document.getElementById('keyBlockedMsg');
+    if (msgEl) msgEl.textContent = msg;
+    if (toast) {
+        toast.classList.remove('hidden');
+        setTimeout(() => toast.classList.add('hidden'), 2800);
+    }
+}
+
+// ----------------------------------------------------
+// 4. Tab-Switch & Fullscreen Enforcement
+// ----------------------------------------------------
+function setupProctoring() {
+    // 1. Tab-switch & Visibility Detection
+    document.addEventListener('visibilitychange', () => {
+        if (!isExamStarted || hasSubmitted) return;
+        if (document.hidden) {
+            showLockdownModal('Tab switch or browser minimization detected!');
+            recordViolation('Tab switched away from exam room');
+        }
+    });
+
+    // 2. Window Blur Detection
+    window.addEventListener('blur', () => {
+        if (!isExamStarted || hasSubmitted) return;
+        showLockdownModal('Window focus lost. Please return to the examination window.');
+        recordViolation('Exam window focus lost');
+    });
+
+    // 3. Fullscreen Exit Detection
+    document.addEventListener('fullscreenchange', () => {
+        if (!isExamStarted || hasSubmitted) return;
+        if (!document.fullscreenElement) {
+            showLockdownModal('You have exited fullscreen lockdown mode!');
+            recordViolation('Exited fullscreen mode');
+        }
+    });
+}
+
+function showLockdownModal(reason) {
+    playSecurityBuzzer();
+    const overlay = document.getElementById('lockdownOverlay');
+    const msgEl = document.getElementById('lockdownOverlayMsg');
+    const countEl = document.getElementById('lockdownViolationCount');
+
+    if (msgEl) msgEl.textContent = reason;
+    if (countEl) countEl.textContent = `${violationsCount} / ${MAX_VIOLATIONS}`;
+    if (overlay) overlay.classList.remove('hidden');
+}
+
+function recordViolation(reason) {
+    if (hasSubmitted) return;
+    violationsCount++;
+    const timestamp = new Date().toLocaleTimeString();
+    violationLogs.push(`[${timestamp}] ${reason}`);
+
+    const sidebarEl = document.getElementById('violationCountSidebar');
+    const badgeEl = document.getElementById('violationCountBadge');
+    const alertEl = document.getElementById('violationAlert');
+    const reasonEl = document.getElementById('violationReasonText');
+    const lockdownCountEl = document.getElementById('lockdownViolationCount');
+
+    if (sidebarEl) sidebarEl.textContent = `${violationsCount} / ${MAX_VIOLATIONS}`;
+    if (badgeEl) badgeEl.textContent = violationsCount;
+    if (lockdownCountEl) lockdownCountEl.textContent = `${violationsCount} / ${MAX_VIOLATIONS}`;
+    if (reasonEl) reasonEl.textContent = reason;
+
+    if (alertEl) {
+        alertEl.classList.remove('hidden');
+        setTimeout(() => alertEl.classList.add('hidden'), 3500);
+    }
+
+    // Auto-terminate exam if violations exceed threshold
+    if (violationsCount >= MAX_VIOLATIONS) {
+        alert(`🚨 MAXIMUM PROCTORING VIOLATIONS (${MAX_VIOLATIONS}) EXCEEDED!\nYour assessment has been automatically locked and submitted.`);
+        submitExam(true);
+    }
+}
+
+// ----------------------------------------------------
+// 5. Exam Lifecycle & Timer
+// ----------------------------------------------------
+function setupEventListeners() {
+    // Start Fullscreen Exam Consent Button
+    document.getElementById('startFullscreenExamBtn')?.addEventListener('click', async () => {
+        try {
+            if (document.documentElement.requestFullscreen) {
+                await document.documentElement.requestFullscreen();
+            }
+        } catch (e) {
+            console.warn('Fullscreen request bypassed:', e);
+        }
+
+        document.getElementById('startExamModal')?.classList.add('hidden');
+        isExamStarted = true;
+        await startCameraAndDetection();
+        setupProctoring();
+        startTimer();
+        renderQuestion();
+        renderPalette();
+    });
+
+    // Resume from Lockdown Modal
+    document.getElementById('resumeExamBtn')?.addEventListener('click', async () => {
+        try {
+            if (!document.fullscreenElement && document.documentElement.requestFullscreen) {
+                await document.documentElement.requestFullscreen();
+            }
+        } catch (e) {}
+        document.getElementById('lockdownOverlay')?.classList.add('hidden');
+    });
+
+    document.getElementById('prevBtn')?.addEventListener('click', () => {
+        if (currentIndex > 0) {
+            currentIndex--;
+            renderQuestion();
+        }
+    });
+
+    document.getElementById('nextBtn')?.addEventListener('click', () => {
+        if (currentIndex < questions.length - 1) {
+            currentIndex++;
+            renderQuestion();
+        } else {
+            openSubmitModal();
+        }
+    });
+
+    document.getElementById('flagBtn')?.addEventListener('click', () => {
+        if (flaggedQuestions.has(currentIndex)) {
+            flaggedQuestions.delete(currentIndex);
+        } else {
+            flaggedQuestions.add(currentIndex);
+        }
+        renderQuestion();
+    });
+
+    document.getElementById('finishExamBtn')?.addEventListener('click', openSubmitModal);
+    document.getElementById('cancelSubmitBtn')?.addEventListener('click', closeSubmitModal);
+    document.getElementById('confirmSubmitBtn')?.addEventListener('click', () => submitExam(false));
 }
 
 function startTimer() {
@@ -114,7 +458,6 @@ function renderQuestion() {
         </div>
     `).join('');
 
-    // Update navigation button states
     const prevBtn = document.getElementById('prevBtn');
     const nextBtn = document.getElementById('nextBtn');
     const flagBtn = document.getElementById('flagBtn');
@@ -158,37 +501,6 @@ window.jumpToQuestion = function(idx) {
     }
 };
 
-function setupEventListeners() {
-    document.getElementById('prevBtn')?.addEventListener('click', () => {
-        if (currentIndex > 0) {
-            currentIndex--;
-            renderQuestion();
-        }
-    });
-
-    document.getElementById('nextBtn')?.addEventListener('click', () => {
-        if (currentIndex < questions.length - 1) {
-            currentIndex++;
-            renderQuestion();
-        } else {
-            openSubmitModal();
-        }
-    });
-
-    document.getElementById('flagBtn')?.addEventListener('click', () => {
-        if (flaggedQuestions.has(currentIndex)) {
-            flaggedQuestions.delete(currentIndex);
-        } else {
-            flaggedQuestions.add(currentIndex);
-        }
-        renderQuestion();
-    });
-
-    document.getElementById('finishExamBtn')?.addEventListener('click', openSubmitModal);
-    document.getElementById('cancelSubmitBtn')?.addEventListener('click', closeSubmitModal);
-    document.getElementById('confirmSubmitBtn')?.addEventListener('click', () => submitExam(false));
-}
-
 function openSubmitModal() {
     const answeredCount = Object.keys(answers).length;
     const unansweredCount = questions.length - answeredCount;
@@ -203,61 +515,18 @@ function closeSubmitModal() {
     document.getElementById('submitModal')?.classList.add('hidden');
 }
 
-// Smart AI Proctoring System
-function setupProctoring() {
-    // 1. Tab-switch & Visibility Detection
-    document.addEventListener('visibilitychange', () => {
-        if (document.hidden && !hasSubmitted) {
-            recordViolation('Tab switched or minimized');
-        }
-    });
-
-    window.addEventListener('blur', () => {
-        if (!hasSubmitted) {
-            recordViolation('Browser focus lost');
-        }
-    });
-
-    // 2. Camera feed initialization (non-blocking)
-    if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
-        navigator.mediaDevices.getUserMedia({ video: true })
-            .then(stream => {
-                const video = document.getElementById('webcamVideo');
-                const placeholder = document.getElementById('webcamPlaceholder');
-                if (video) {
-                    video.srcObject = stream;
-                    video.classList.remove('hidden');
-                    if (placeholder) placeholder.classList.add('hidden');
-                }
-            })
-            .catch(() => {
-                // Keep simulated camera proctoring sensor active
-            });
-    }
-}
-
-function recordViolation(reason) {
-    violationsCount++;
-    const sidebarEl = document.getElementById('violationCountSidebar');
-    const badgeEl = document.getElementById('violationCountBadge');
-    const alertEl = document.getElementById('violationAlert');
-
-    if (sidebarEl) sidebarEl.textContent = violationsCount;
-    if (badgeEl) badgeEl.textContent = violationsCount;
-
-    if (alertEl) {
-        alertEl.classList.remove('hidden');
-        setTimeout(() => {
-            alertEl.classList.add('hidden');
-        }, 3500);
-    }
-}
-
 async function submitExam(auto = false) {
     if (hasSubmitted) return;
     hasSubmitted = true;
 
     if (timerInterval) clearInterval(timerInterval);
+    if (detectionInterval) clearInterval(detectionInterval);
+
+    try {
+        if (document.fullscreenElement && document.exitFullscreen) {
+            document.exitFullscreen();
+        }
+    } catch (e) {}
 
     const submitBtn = document.getElementById('confirmSubmitBtn');
     if (submitBtn) {
@@ -270,6 +539,9 @@ async function submitExam(auto = false) {
             answers: answers,
             violationsCount: violationsCount
         });
+
+        // Store detailed violation logs in localStorage for result review
+        localStorage.setItem(`violations_${response.submissionId}`, JSON.stringify(violationLogs));
 
         if (response && response.submissionId) {
             window.location.href = `result.html?id=${response.submissionId}`;
