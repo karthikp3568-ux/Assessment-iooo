@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Student Dashboard - AssessX</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="container">
+            <div class="nav-brand">
+                <span>AssessX</span>
+                <span class="badge badge-primary">Student Portal</span>
+            </div>
+            <div class="nav-user">
+                <span id="userName" style="font-weight: 600; font-size: 0.9rem;">Welcome, Student</span>
+                <button id="logoutBtn" class="btn btn-outline btn-sm">Logout</button>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container mt-4 mb-4">
+        <div class="flex justify-between items-center mb-3">
+            <div>
+                <h2>My Assessment Portal</h2>
+                <p style="color: var(--text-muted); font-size: 0.9375rem;">Access scheduled examinations, proctored tests, and past performance scorecards</p>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-3 mb-4">
+            <div class="stat-card">
+                <div class="stat-label">Available Assessments</div>
+                <div class="stat-val" id="statAvailable">-</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Completed Tests</div>
+                <div class="stat-val" id="statCompleted" style="color: var(--secondary);">-</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Average Score</div>
+                <div class="stat-val" id="statAvgScore" style="color: var(--primary);">-</div>
+            </div>
+        </div>
+
+        <div class="mb-4">
+            <h3 class="mb-2">Available Live Assessments</h3>
+            <div id="assessmentsLoading" class="text-center" style="padding: 2rem; color: var(--text-muted);">
+                Loading available assessments from server...
+            </div>
+            <div id="assessmentsGrid" class="grid grid-cols-2"></div>
+        </div>
+
+        <div class="card">
+            <h3 class="mb-2">My Recent Exam Attempts & Performance</h3>
+            <div style="overflow-x: auto;">
+                <table style="width: 100%; border-collapse: collapse; text-align: left; font-size: 0.9rem;">
+                    <thead>
+                        <tr style="border-bottom: 2px solid var(--border); color: var(--text-muted);">
+                            <th style="padding: 0.75rem;">Assessment Title</th>
+                            <th style="padding: 0.75rem;">Score</th>
+                            <th style="padding: 0.75rem;">Percentage</th>
+                            <th style="padding: 0.75rem;">Status</th>
+                            <th style="padding: 0.75rem;">Proctoring Violations</th>
+                            <th style="padding: 0.75rem;">Date</th>
+                            <th style="padding: 0.75rem; text-align: right;">Action</th>
+                        </tr>
+                    </thead>
+                    <tbody id="submissionsTableBody">
+                        <tr>
+                            <td colspan="7" class="text-center" style="padding: 1.5rem; color: var(--text-muted);">
+                                Loading submission history...
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/api.js"></script>
+    <script src="js/student.js"></script>
+</body>
+</html>

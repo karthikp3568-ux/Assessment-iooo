@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Live Assessment - AssessX</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body style="background-color: #F1F5F9;">
+    <!-- Anti-Cheat Violation Banner (Hidden by default) -->
+    <div id="violationAlert" class="alert alert-danger hidden" style="position: fixed; top: 1rem; left: 50%; transform: translateX(-50%); z-index: 999; box-shadow: var(--shadow-lg); font-size: 0.95rem;">
+        ⚠️ <strong>Proctoring Warning:</strong> Tab switch or window blur detected! Violation has been logged (<span id="violationCountBadge">1</span>).
+    </div>
+
+    <!-- Exam Header -->
+    <header class="exam-header">
+        <div>
+            <h3 id="examTitle" style="font-size: 1.2rem; margin-bottom: 0.15rem;">Loading Assessment...</h3>
+            <span id="examMeta" style="font-size: 0.8125rem; color: var(--text-muted);">Duration: - mins</span>
+        </div>
+        <div class="flex items-center gap-2">
+            <div class="timer-badge">
+                <span>⏱️</span>
+                <span id="timerDisplay">00:00</span>
+            </div>
+            <button id="finishExamBtn" class="btn btn-primary btn-sm">
+                Submit Test
+            </button>
+        </div>
+    </header>
+
+    <div class="container">
+        <div class="exam-grid">
+            <!-- Main Question Area -->
+            <div>
+                <div class="question-card mb-3">
+                    <div class="flex justify-between items-center mb-3">
+                        <span id="questionNumLabel" class="badge badge-primary" style="font-size: 0.8125rem;">
+                            Question 1 of 5
+                        </span>
+                        <span id="questionMarksLabel" style="font-size: 0.8125rem; font-weight: 600; color: var(--text-muted);">
+                            10 Marks
+                        </span>
+                    </div>
+
+                    <div id="questionText" class="question-text">
+                        Loading question...
+                    </div>
+
+                    <div id="optionsContainer">
+                        <!-- Options generated dynamically -->
+                    </div>
+                </div>
+
+                <!-- Navigation Controls -->
+                <div class="flex justify-between items-center">
+                    <div class="flex gap-1">
+                        <button id="prevBtn" class="btn btn-outline btn-sm" disabled>
+                            ← Previous
+                        </button>
+                        <button id="flagBtn" class="btn btn-outline btn-sm">
+                            🚩 Mark for Review
+                        </button>
+                    </div>
+                    <button id="nextBtn" class="btn btn-primary btn-sm">
+                        Next Question →
+                    </button>
+                </div>
+            </div>
+
+            <!-- Sidebar: Proctoring & Palette -->
+            <div>
+                <!-- Smart AI Proctoring Widget -->
+                <div class="proctor-widget">
+                    <div class="flex justify-between items-center mb-1">
+                        <span style="font-size: 0.8125rem; font-weight: 700; text-transform: uppercase; color: #94A3B8;">
+                            AI Proctoring
+                        </span>
+                        <span class="flex items-center gap-1" style="font-size: 0.75rem; color: #4ADE80; font-weight: 600;">
+                            <span class="rec-dot"></span> LIVE
+                        </span>
+                    </div>
+
+                    <div class="webcam-feed" id="webcamFeedBox">
+                        <video id="webcamVideo" autoplay playsinline muted style="width: 100%; height: 100%; object-fit: cover; border-radius: 0.375rem;" class="hidden"></video>
+                        <div id="webcamPlaceholder" style="text-align: center; color: #94A3B8; font-size: 0.8125rem;">
+                            <div style="font-size: 1.5rem; margin-bottom: 0.25rem;">📹</div>
+                            <div>Proctoring Sensor Active</div>
+                            <div style="font-size: 0.7rem; color: #64748B;">Monitoring environment</div>
+                        </div>
+                    </div>
+
+                    <div class="flex justify-between items-center" style="font-size: 0.75rem; color: #94A3B8; border-top: 1px solid #334155; padding-top: 0.5rem;">
+                        <span>Security Violations:</span>
+                        <span id="violationCountSidebar" style="color: #F87171; font-weight: 700;">0</span>
+                    </div>
+                </div>
+
+                <!-- Question Palette -->
+                <div class="card">
+                    <h4 style="font-size: 0.95rem;" class="mb-2">Question Palette</h4>
+                    <div class="flex gap-2 mb-2" style="font-size: 0.75rem; color: var(--text-muted);">
+                        <span class="flex items-center gap-1"><span style="width: 10px; height: 10px; background: var(--secondary); border-radius: 2px;"></span> Answered</span>
+                        <span class="flex items-center gap-1"><span style="width: 10px; height: 10px; background: var(--warning); border-radius: 2px;"></span> Flagged</span>
+                        <span class="flex items-center gap-1"><span style="width: 10px; height: 10px; background: #FFFFFF; border: 1px solid var(--border); border-radius: 2px;"></span> Unanswered</span>
+                    </div>
+                    <div id="paletteGrid" class="palette-grid">
+                        <!-- Palette buttons generated dynamically -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Submit Confirmation Modal -->
+    <div id="submitModal" class="modal-overlay hidden">
+        <div class="modal-content text-center">
+            <h3 class="mb-2">Submit Assessment?</h3>
+            <p style="color: var(--text-muted); font-size: 0.9rem;" class="mb-3">
+                Are you sure you want to finish your test and submit answers for automated grading?
+            </p>
+            <div class="card mb-3" style="background: var(--bg-color); text-align: left; font-size: 0.875rem;">
+                <div class="flex justify-between mb-1">
+                    <span>Total Questions:</span>
+                    <strong id="modalTotalQ">0</strong>
+                </div>
+                <div class="flex justify-between mb-1">
+                    <span>Answered:</span>
+                    <strong id="modalAnsweredQ" style="color: var(--secondary);">0</strong>
+                </div>
+                <div class="flex justify-between">
+                    <span>Unanswered:</span>
+                    <strong id="modalUnansweredQ" style="color: var(--danger);">0</strong>
+                </div>
+            </div>
+            <div class="flex gap-2 justify-center">
+                <button id="cancelSubmitBtn" class="btn btn-outline">Review Test</button>
+                <button id="confirmSubmitBtn" class="btn btn-primary">Confirm & Submit</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/api.js"></script>
+    <script src="js/exam.js"></script>
+</body>
+</html>

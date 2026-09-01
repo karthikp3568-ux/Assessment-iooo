@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Dashboard - AssessX</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="container">
+            <div class="nav-brand">
+                <span>AssessX</span>
+                <span class="badge badge-warning">Admin Console</span>
+            </div>
+            <div class="nav-user">
+                <span id="adminName" style="font-weight: 600; font-size: 0.9rem;">Welcome, Admin</span>
+                <button id="logoutBtn" class="btn btn-outline btn-sm">Logout</button>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container mt-4 mb-4">
+        <div class="flex justify-between items-center mb-3">
+            <div>
+                <h2>Examinations & Proctoring Oversight</h2>
+                <p style="color: var(--text-muted); font-size: 0.9375rem;">Manage test configurations, review submissions, and monitor integrity logs</p>
+            </div>
+            <button id="openCreateModalBtn" class="btn btn-primary">
+                + Create New Assessment
+            </button>
+        </div>
+
+        <!-- Metrics Overview Grid -->
+        <div class="grid grid-cols-4 mb-4">
+            <div class="stat-card">
+                <div class="stat-label">Active Assessments</div>
+                <div class="stat-val" id="statAssessmentsCount">-</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Total Submissions</div>
+                <div class="stat-val" id="statSubmissionsCount" style="color: var(--primary);">-</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Average Score</div>
+                <div class="stat-val" id="statAvgScore" style="color: var(--secondary);">-</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Flagged Violations</div>
+                <div class="stat-val" id="statViolationsCount" style="color: var(--danger);">-</div>
+            </div>
+        </div>
+
+        <!-- Assessments Management -->
+        <div class="card mb-4">
+            <h3 class="mb-2">Configured Assessments</h3>
+            <div style="overflow-x: auto;">
+                <table style="width: 100%; border-collapse: collapse; text-align: left; font-size: 0.9rem;">
+                    <thead>
+                        <tr style="border-bottom: 2px solid var(--border); color: var(--text-muted);">
+                            <th style="padding: 0.75rem;">Title</th>
+                            <th style="padding: 0.75rem;">Category</th>
+                            <th style="padding: 0.75rem;">Questions</th>
+                            <th style="padding: 0.75rem;">Total Marks</th>
+                            <th style="padding: 0.75rem;">Duration</th>
+                            <th style="padding: 0.75rem; text-align: right;">Action</th>
+                        </tr>
+                    </thead>
+                    <tbody id="assessmentsTableBody">
+                        <tr>
+                            <td colspan="6" class="text-center" style="padding: 1.5rem; color: var(--text-muted);">
+                                Loading assessments...
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Candidate Submissions Log -->
+        <div class="card">
+            <h3 class="mb-2">Candidate Submissions & Proctoring Log</h3>
+            <div style="overflow-x: auto;">
+                <table style="width: 100%; border-collapse: collapse; text-align: left; font-size: 0.9rem;">
+                    <thead>
+                        <tr style="border-bottom: 2px solid var(--border); color: var(--text-muted);">
+                            <th style="padding: 0.75rem;">Candidate Name</th>
+                            <th style="padding: 0.75rem;">Assessment</th>
+                            <th style="padding: 0.75rem;">Score</th>
+                            <th style="padding: 0.75rem;">Status</th>
+                            <th style="padding: 0.75rem;">Integrity Log</th>
+                            <th style="padding: 0.75rem;">Submitted At</th>
+                            <th style="padding: 0.75rem; text-align: right;">Scorecard</th>
+                        </tr>
+                    </thead>
+                    <tbody id="adminSubmissionsTableBody">
+                        <tr>
+                            <td colspan="7" class="text-center" style="padding: 1.5rem; color: var(--text-muted);">
+                                Loading submissions...
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Create Assessment Modal -->
+    <div id="createModal" class="modal-overlay hidden">
+        <div class="modal-content" style="max-width: 700px;">
+            <div class="flex justify-between items-center mb-3">
+                <h3>Create New Assessment</h3>
+                <button id="closeModalBtn" style="background: none; border: none; font-size: 1.5rem; cursor: pointer;">&times;</button>
+            </div>
+
+            <form id="createAssessmentForm">
+                <div class="form-group">
+                    <label class="form-label" for="examTitleInput">Assessment Title *</label>
+                    <input type="text" id="examTitleInput" class="form-control" required placeholder="e.g. Fullstack React & Node.js Assessment">
+                </div>
+
+                <div class="grid grid-cols-2 gap-2 mb-2">
+                    <div class="form-group">
+                        <label class="form-label" for="examCategoryInput">Category</label>
+                        <input type="text" id="examCategoryInput" class="form-control" placeholder="e.g. Web Development">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label" for="examDurationInput">Duration (Minutes) *</label>
+                        <input type="number" id="examDurationInput" class="form-control" min="5" value="30" required>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label" for="examDescriptionInput">Description</label>
+                    <textarea id="examDescriptionInput" class="form-control" rows="2" placeholder="Brief summary of test topics"></textarea>
+                </div>
+
+                <div class="mb-3">
+                    <div class="flex justify-between items-center mb-2">
+                        <label class="form-label" style="margin-bottom: 0;">Questions *</label>
+                        <button type="button" id="addQuestionBtn" class="btn btn-outline btn-sm">+ Add Question</button>
+                    </div>
+                    <div id="questionsContainer" class="flex flex-col gap-2">
+                        <!-- Dynamic Question Blocks -->
+                    </div>
+                </div>
+
+                <div class="flex gap-2 justify-between" style="border-top: 1px solid var(--border); padding-top: 1rem;">
+                    <button type="button" id="cancelModalBtn" class="btn btn-outline">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Save Assessment</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script src="js/api.js"></script>
+    <script src="js/admin.js"></script>
+</body>
+</html>

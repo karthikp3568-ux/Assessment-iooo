@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Assessment Scorecard - AssessX</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="container">
+            <div class="nav-brand">
+                <span>AssessX</span>
+                <span class="badge badge-primary">Scorecard</span>
+            </div>
+            <div class="nav-user">
+                <a href="student-dashboard.html" class="btn btn-outline btn-sm">← Back to Dashboard</a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container mt-4 mb-4" style="max-width: 900px;">
+        <div id="resultLoading" class="text-center" style="padding: 3rem; color: var(--text-muted);">
+            Loading scorecard...
+        </div>
+
+        <div id="resultContent" class="hidden">
+            <!-- Score Hero Card -->
+            <div class="score-hero mb-4">
+                <span id="passFailBadge" class="badge badge-success" style="font-size: 0.875rem; padding: 0.35rem 1rem;">
+                    Passed Assessment
+                </span>
+                <div class="score-circle">
+                    <span class="score-num" id="percentageDisplay">0%</span>
+                    <span style="font-size: 0.75rem; color: #94A3B8;">SCORE</span>
+                </div>
+                <h2 id="resultExamTitle" style="color: #FFFFFF; font-size: 1.5rem; margin-bottom: 0.25rem;">-</h2>
+                <p id="candidateName" style="color: #94A3B8; font-size: 0.9rem;">Candidate: -</p>
+            </div>
+
+            <!-- Performance Metrics Grid -->
+            <div class="grid grid-cols-4 mb-4">
+                <div class="stat-card">
+                    <div class="stat-label">Marks Obtained</div>
+                    <div class="stat-val" id="statScore">-</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">Passing Criteria</div>
+                    <div class="stat-val" id="statPassMarks">-</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">Accuracy</div>
+                    <div class="stat-val" id="statAccuracy" style="color: var(--secondary);">-</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">Proctoring Status</div>
+                    <div class="stat-val" id="statViolations" style="font-size: 1.4rem;">-</div>
+                </div>
+            </div>
+
+            <!-- Detailed Question Review -->
+            <div class="card mb-4">
+                <h3 class="mb-3">Detailed Question Analysis</h3>
+                <div id="answersReviewContainer" class="flex flex-col gap-3">
+                    <!-- Dynamic question reviews -->
+                </div>
+            </div>
+
+            <div class="text-center">
+                <a href="student-dashboard.html" class="btn btn-primary">
+                    Return to My Dashboard
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/api.js"></script>
+    <script src="js/result.js"></script>
+</body>
+</html>
