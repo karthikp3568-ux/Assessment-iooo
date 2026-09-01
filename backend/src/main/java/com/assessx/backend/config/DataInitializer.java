@@ -162,7 +162,7 @@ public class DataInitializer implements CommandLineRunner {
                             .questionType("CODING")
                             .questionText("Coding Problem: IoT Sensor Temperature Converter\n\nWrite a function that converts a Celsius reading to Fahrenheit.\nFormula: (C * 9/5) + 32\n\nExample:\nInput: 25.0\nOutput: 77.0")
                             .programmingLanguage("python")
-                            .starterCode("def celsius_to_fahrenheit(c: float) -> float:\n    # Write your conversion logic here\n    return (c * 9/5) + 32")
+                            .starterCode("def celsius_to_fahrenheit(c: float) -> float:\n    # Write your conversion logic here\n    pass")
                             .sampleInput("25.0")
                             .sampleOutput("77.0")
                             .testCases("[{\"input\": \"25.0\", \"output\": \"77.0\"}, {\"input\": \"0.0\", \"output\": \"32.0\"}]")

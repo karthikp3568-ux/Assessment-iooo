@@ -480,7 +480,7 @@ window.runCodeTestCases = async function(questionId) {
                     resultLines.push(`✅ Test Case ${i + 1}: PASSED (${result.time || '~'}ms)\n   Input: ${tc.input.replace(/\n/g, ' | ')}\n   Expected: ${expected}\n   Output: ${actual}`);
                     if (tcTabIcon) tcTabIcon.textContent = '✅';
                 } else {
-                    resultLines.push(`❌ Test Case ${i + 1}: FAILED\n   Input: ${tc.input.replace(/\n/g, ' | ')}\n   Expected: ${expected}\n   Got: ${actual}`);
+                    resultLines.push(`❌ Test Case ${i + 1}: FAILED\n   Input: ${tc.input.replace(/\n/g, ' | ')}\n   Expected: ${expected}\n   Got: ${actual || '(No output produced - ensure you print the result with System.out.println)'}`);
                     if (tcTabIcon) tcTabIcon.textContent = '❌';
                 }
             } catch (err) {
@@ -532,14 +532,6 @@ function runCodeInSandbox(language, code, inputStr) {
     const lines = (inputStr || '').split('\n');
     let lineIdx = 0;
 
-    const Scanner = {
-        nextInt: () => parseInt(rawTokens[tokenIdx++] || '0', 10),
-        nextDouble: () => parseFloat(rawTokens[tokenIdx++] || '0'),
-        next: () => rawTokens[tokenIdx++] || '',
-        nextLine: () => lines[lineIdx++] !== undefined ? lines[lineIdx - 1] : '',
-        hasNext: () => tokenIdx < rawTokens.length
-    };
-
     // JavaScript Execution Sandbox
     if (lang === 'javascript' || lang === 'js') {
         try {
@@ -549,10 +541,14 @@ function runCodeInSandbox(language, code, inputStr) {
                 warn: (...args) => output.push(args.join(' '))
             };
             const fn = new Function('console', 'input', 'Scanner', code);
-            fn(customConsole, inputStr, Scanner);
-            return { output: output.join('\n'), error: null };
+            fn(customConsole, inputStr, {
+                next: () => rawTokens[tokenIdx++] || '',
+                nextInt: () => parseInt(rawTokens[tokenIdx++] || '0', 10),
+                nextLine: () => lines[lineIdx++] || ''
+            });
+            return { output: output.join('\n').trim(), error: null };
         } catch (e) {
-            return { output: '', error: e.message };
+            return { output: '', error: 'JavaScript Error: ' + e.message };
         }
     }
 
@@ -570,64 +566,197 @@ function runCodeInSandbox(language, code, inputStr) {
                 .replace(/\bTrue\b/g, 'true')
                 .replace(/\bFalse\b/g, 'false');
 
+            const pyScanner = {
+                nextInt: () => parseInt(rawTokens[tokenIdx++] || '0', 10),
+                next: () => rawTokens[tokenIdx++] || '',
+                nextLine: () => lines[lineIdx++] || ''
+            };
             const fn = new Function('Scanner', 'output', 'Math', js);
-            fn(Scanner, pyOutput, Math);
-            return { output: pyOutput.join('\n'), error: null };
+            fn(pyScanner, pyOutput, Math);
+            return { output: pyOutput.join('\n').trim(), error: null };
         } catch (e) {
-            return { output: '', error: e.message };
+            return { output: '', error: 'Python Execution Error: ' + e.message };
         }
     }
 
-    // Java / C++ Algorithmic Execution Sandbox
+    // Full Java / C++ Algorithmic Execution Engine
     try {
-        let linesOfCode = code.split('\n');
-        let cleanLines = [];
+        let clean = (code || '').trim();
+        if (!clean || clean.length < 5) {
+            return { output: '', error: 'No code provided. Please write your Java code in the editor.' };
+        }
+
+        // Basic Syntax Validation
+        const openBraces = (clean.match(/\{/g) || []).length;
+        const closeBraces = (clean.match(/\}/g) || []).length;
+        if (openBraces !== closeBraces) {
+            return { output: '', error: `Java Syntax Error: Unmatched braces ({ = ${openBraces}, } = ${closeBraces})` };
+        }
+
+        const openParens = (clean.match(/\(/g) || []).length;
+        const closeParens = (clean.match(/\)/g) || []).length;
+        if (openParens !== closeParens) {
+            return { output: '', error: `Java Syntax Error: Unmatched parentheses (( = ${openParens}, ) = ${closeParens})` };
+        }
+
+        // Java Scanner Implementation
+        const Scanner = {
+            nextInt: () => {
+                if (tokenIdx >= rawTokens.length) return 0;
+                return parseInt(rawTokens[tokenIdx++], 10);
+            },
+            nextDouble: () => {
+                if (tokenIdx >= rawTokens.length) return 0.0;
+                return parseFloat(rawTokens[tokenIdx++]);
+            },
+            nextLong: () => {
+                if (tokenIdx >= rawTokens.length) return 0;
+                return parseInt(rawTokens[tokenIdx++], 10);
+            },
+            next: () => {
+                if (tokenIdx >= rawTokens.length) return '';
+                return rawTokens[tokenIdx++];
+            },
+            nextLine: () => {
+                if (lineIdx >= lines.length) return '';
+                return lines[lineIdx++];
+            },
+            hasNext: () => tokenIdx < rawTokens.length,
+            hasNextInt: () => tokenIdx < rawTokens.length && !isNaN(parseInt(rawTokens[tokenIdx], 10))
+        };
+
+        // System.out Implementation
+        const System = {
+            out: {
+                println: (...args) => {
+                    output.push(args.map(a => a === undefined ? 'null' : String(a)).join(''));
+                },
+                print: (...args) => {
+                    const s = args.map(a => a === undefined ? 'null' : String(a)).join('');
+                    if (output.length > 0) {
+                        output[output.length - 1] += s;
+                    } else {
+                        output.push(s);
+                    }
+                },
+                printf: (fmt, ...args) => {
+                    let s = String(fmt);
+                    args.forEach(a => { s = s.replace(/%[sdf]/, String(a)); });
+                    output.push(s);
+                }
+            }
+        };
+
+        // Java Collections Polyfills
+        class ArrayList extends Array {
+            add(val) { this.push(val); return true; }
+            get(i) { return this[i]; }
+            size() { return this.length; }
+            set(i, val) { this[i] = val; }
+            remove(i) { return this.splice(i, 1)[0]; }
+            isEmpty() { return this.length === 0; }
+            contains(val) { return this.includes(val); }
+        }
+
+        class HashMap extends Map {
+            put(k, v) { this.set(k, v); }
+            containsKey(k) { return this.has(k); }
+            size() { return this.size; }
+            isEmpty() { return this.size === 0; }
+        }
+
+        class HashSet extends Set {
+            add(v) { super.add(v); return true; }
+            contains(v) { return this.has(v); }
+            size() { return this.size; }
+            isEmpty() { return this.size === 0; }
+        }
+
+        const Arrays = {
+            sort: (arr) => arr.sort((a, b) => a - b),
+            toString: (arr) => '[' + arr.join(', ') + ']'
+        };
+
+        const Collections = {
+            sort: (list) => list.sort((a, b) => a - b),
+            reverse: (list) => list.reverse(),
+            max: (list) => Math.max(...list),
+            min: (list) => Math.min(...list)
+        };
+
+        // Remove comments
+        clean = clean.replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/.*$/gm, '');
+
+        let linesOfCode = clean.split('\n');
+        let processedLines = [];
         for (let line of linesOfCode) {
             let l = line.trim();
             if (l.startsWith('import ') || l.startsWith('package ') || l.startsWith('#include') || l.startsWith('using namespace')) continue;
-            if (l.match(/^(public\s+|private\s+)?class\s+\w+/)) continue;
+            if (l.match(/^public\s+class\s+\w+/)) continue;
+            if (l.match(/^class\s+\w+/)) continue;
             if (l.match(/^(public\s+|static\s+|void\s+|int\s+)+main\s*\(/)) continue;
             if (l.match(/^Scanner\s+\w+\s*=\s*new\s+Scanner/)) continue;
-            cleanLines.push(line);
+            processedLines.push(line);
         }
-        let body = cleanLines.join('\n');
+        let body = processedLines.join('\n');
 
         // Strip outermost class and main closing braces
         let trimmed = body.trim();
-        let braceCount = (trimmed.match(/\}/g) || []).length;
-        let openCount = (trimmed.match(/\{/g) || []).length;
-        while (braceCount > openCount && trimmed.endsWith('}')) {
+        while (trimmed.endsWith('}')) {
             trimmed = trimmed.substring(0, trimmed.lastIndexOf('}')).trim();
-            braceCount--;
         }
 
+        // Transpile Java syntax to JS
         let js = trimmed
             .replace(/\bint\s*\[\s*\]/g, 'let ')
-            .replace(/\bint\b/g, 'let ')
-            .replace(/\bdouble\b/g, 'let ')
-            .replace(/\blong\b/g, 'let ')
-            .replace(/\bboolean\b/g, 'let ')
-            .replace(/\bString\b/g, 'let ')
-            .replace(/\bchar\b/g, 'let ')
+            .replace(/\bdouble\s*\[\s*\]/g, 'let ')
+            .replace(/\bString\s*\[\s*\]/g, 'let ')
+            .replace(/\bint\b/g, 'let')
+            .replace(/\bdouble\b/g, 'let')
+            .replace(/\blong\b/g, 'let')
+            .replace(/\bboolean\b/g, 'let')
+            .replace(/\bString\b/g, 'let')
+            .replace(/\bchar\b/g, 'let')
+            .replace(/\bvoid\b/g, '')
             .replace(/Integer\.MIN_VALUE/g, '(-Infinity)')
             .replace(/Integer\.MAX_VALUE/g, '(Infinity)')
             .replace(/Integer\.parseInt\s*\((.*?)\)/g, 'parseInt($1, 10)')
+            .replace(/Double\.parseDouble\s*\((.*?)\)/g, 'parseFloat($1)')
             .replace(/new\s+StringBuilder\s*\((.*?)\)\.reverse\(\)\.toString\(\)/g, '($1).split("").reverse().join("")')
             .replace(/\.equals\s*\((.*?)\)/g, ' === $1')
             .replace(/\.equalsIgnoreCase\s*\((.*?)\)/g, '.toLowerCase() === ($1).toLowerCase()')
-            .replace(/System\.out\.println\s*\((.*?)\);/g, 'output.push(String($1));')
-            .replace(/System\.out\.print\s*\((.*?)\);/g, 'output.push(String($1));')
-            .replace(/cout\s*<<\s*(.*?)\s*<<\s*endl\s*;/g, 'output.push(String($1));')
-            .replace(/cout\s*<<\s*(.*?)\s*;/g, 'output.push(String($1));')
+            .replace(/cout\s*<<\s*(.*?)\s*<<\s*endl\s*;/g, 'System.out.println($1);')
+            .replace(/cout\s*<<\s*(.*?)\s*;/g, 'System.out.print($1);')
             .replace(/\b[a-zA-Z0-9_]+\.nextInt\(\)/g, 'Scanner.nextInt()')
+            .replace(/\b[a-zA-Z0-9_]+\.nextDouble\(\)/g, 'Scanner.nextDouble()')
             .replace(/\b[a-zA-Z0-9_]+\.nextLine\(\)/g, 'Scanner.nextLine()')
-            .replace(/\b[a-zA-Z0-9_]+\.next\(\)/g, 'Scanner.next()');
+            .replace(/\b[a-zA-Z0-9_]+\.next\(\)/g, 'Scanner.next()')
+            .replace(/\b[a-zA-Z0-9_]+\.hasNextInt\(\)/g, 'Scanner.hasNextInt()')
+            .replace(/\b[a-zA-Z0-9_]+\.hasNext\(\)/g, 'Scanner.hasNext()');
 
-        const fn = new Function('Scanner', 'output', 'Math', js);
-        fn(Scanner, output, Math);
-        return { output: output.join('\n'), error: null };
+        const sandboxGlobals = {
+            Scanner,
+            System,
+            ArrayList,
+            HashMap,
+            HashSet,
+            Arrays,
+            Collections,
+            Math,
+            parseInt,
+            parseFloat
+        };
+
+        const argNames = Object.keys(sandboxGlobals);
+        const argValues = Object.values(sandboxGlobals);
+
+        const fn = new Function(...argNames, js);
+        fn(...argValues);
+
+        const finalOutput = output.join('\n').trim();
+        return { output: finalOutput, error: null };
     } catch (e) {
-        return { output: '', error: 'Execution Error: ' + e.message };
+        return { output: '', error: 'Java Runtime/Compilation Error: ' + e.message };
     }
 }
 
