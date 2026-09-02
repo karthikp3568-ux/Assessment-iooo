@@ -25,7 +25,6 @@ public class QuestionDTO {
     private String programmingLanguage;
     private String sampleInput;
     private String sampleOutput;
-    private String testCases; // JSON array of [{input, expectedOutput}]
     
     private int marks;
 }

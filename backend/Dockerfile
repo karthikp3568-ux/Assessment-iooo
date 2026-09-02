@@ -1,5 +1,5 @@
 # Build stage - use Maven image directly to avoid wrapper JAR issues
-FROM maven:3.9-eclipse-temurin-17-alpine AS build
+FROM maven:3.9-eclipse-temurin-25-alpine AS build
 WORKDIR /app
 
 # Copy the pom.xml file first for dependency caching
@@ -15,7 +15,7 @@ COPY src src
 RUN mvn package -DskipTests -B
 
 # Run stage - lightweight JRE with memory-efficient flags for free tier (512MB RAM)
-FROM eclipse-temurin:17-jre-alpine
+FROM eclipse-temurin:25-jre-alpine
 WORKDIR /app
 COPY --from=build /app/target/backend-0.0.1-SNAPSHOT.jar app.jar
 

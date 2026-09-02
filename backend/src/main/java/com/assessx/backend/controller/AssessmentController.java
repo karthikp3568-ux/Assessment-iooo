@@ -3,6 +3,8 @@ package com.assessx.backend.controller;
 import com.assessx.backend.dto.*;
 import com.assessx.backend.service.AssessmentService;
 import com.assessx.backend.service.SubmissionService;
+import com.assessx.backend.service.CodingExecutionService;
+import com.assessx.backend.repository.AssessmentRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
@@ -17,6 +19,8 @@ public class AssessmentController {
 
     private final AssessmentService assessmentService;
     private final SubmissionService submissionService;
+    private final AssessmentRepository assessmentRepository;
+    private final CodingExecutionService codingExecutionService;
 
     @GetMapping
     public ResponseEntity<List<AssessmentSummaryDTO>> getAllAssessments() {
@@ -47,5 +51,13 @@ public class AssessmentController {
     ) {
         String username = authentication != null ? authentication.getName() : "anonymous";
         return ResponseEntity.ok(submissionService.submitExam(id, request, username));
+    }
+
+    @PostMapping("/{id}/run")
+    public ResponseEntity<RunCodeResponse> runCode(@PathVariable Long id, @RequestBody RunCodeRequest request) {
+        var assessment = assessmentRepository.findById(id).orElseThrow(() -> new java.util.NoSuchElementException("Assessment not found"));
+        var question = assessment.getQuestions().stream().filter(q -> q.getId().equals(request.getQuestionId()) && "CODING".equalsIgnoreCase(q.getQuestionType())).findFirst().orElseThrow(() -> new java.util.NoSuchElementException("Coding question not found"));
+        var result = codingExecutionService.run(question.getProgrammingLanguage(), request.getCode(), request.getInput());
+        return ResponseEntity.ok(new RunCodeResponse(result.success(), result.output(), result.error()));
     }
 }
