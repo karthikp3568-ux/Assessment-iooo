@@ -188,6 +188,8 @@ function renderQuestion() {
     if (!questions[currentIndex]) return;
     const q = questions[currentIndex];
     const isCoding = (q.questionType && q.questionType.toUpperCase() === 'CODING') || q.starterCode;
+    document.body.classList.toggle('coding-mode', !!isCoding);
+    document.querySelector('.coding-editor-panel')?.remove();
 
     // Destroy previous CodeMirror instance
     if (codeMirrorInstance) {
@@ -291,6 +293,23 @@ Click "Run Code & Test" to compile and execute your implementation against test 
 
             ${testCasesHtml}
         `;
+
+        // Split the coding workspace into dedicated problem, editor, and results panels.
+        const examGrid = document.querySelector('.exam-grid');
+        const editorBox = optionsContainer.querySelector('.code-editor-box');
+        const testPanel = optionsContainer.querySelector('.test-cases-panel');
+        const sidebar = examGrid?.lastElementChild;
+        if (examGrid && editorBox && sidebar) {
+            const editorPanel = document.createElement('section');
+            editorPanel.className = 'coding-editor-panel';
+            editorPanel.setAttribute('aria-label', 'Code editor');
+            editorPanel.appendChild(editorBox);
+            examGrid.insertBefore(editorPanel, sidebar);
+            if (testPanel) {
+                testPanel.classList.add('coding-results-panel');
+                sidebar.prepend(testPanel);
+            }
+        }
 
         // Initialize CodeMirror
         const cmMode = CM_MODE_MAP[lang] || 'text/x-java';

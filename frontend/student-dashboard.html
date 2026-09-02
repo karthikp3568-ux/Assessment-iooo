@@ -1,88 +1,29 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Student Dashboard - AssessX</title>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="css/style.css">
-    <link rel="stylesheet" href="css/design-system.css">
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Student Dashboard - AssessX</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css"><link rel="stylesheet" href="css/design-system.css">
 </head>
-<body>
-    <nav class="navbar">
-        <div class="container">
-            <div class="nav-brand">
-                <span>AssessX</span>
-                <span class="badge badge-primary">Student Portal</span>
-            </div>
-            <div class="nav-user">
-                <span id="userName" style="font-weight: 600; font-size: 0.9rem;">Welcome, Student</span>
-                <button id="logoutBtn" class="btn btn-outline btn-sm">Logout</button>
-            </div>
-        </div>
-    </nav>
-
-    <div class="container mt-4 mb-4">
-        <div class="flex justify-between items-center mb-3">
-            <div>
-                <h2>My Assessment Portal</h2>
-                <p style="color: var(--text-muted); font-size: 0.9375rem;">Access scheduled examinations, proctored tests, and past performance scorecards</p>
-            </div>
-        </div>
-
-        <div class="grid grid-cols-3 mb-4">
-            <div class="stat-card">
-                <div class="stat-label">Available Assessments</div>
-                <div class="stat-val" id="statAvailable">-</div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-label">Completed Tests</div>
-                <div class="stat-val" id="statCompleted" style="color: var(--secondary);">-</div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-label">Average Score</div>
-                <div class="stat-val" id="statAvgScore" style="color: var(--primary);">-</div>
-            </div>
-        </div>
-
-        <div class="mb-4">
-            <h3 class="mb-2">Available Live Assessments</h3>
-            <div id="assessmentsLoading" class="text-center" style="padding: 2rem; color: var(--text-muted);">
-                Loading available assessments from server...
-            </div>
-            <div id="assessmentsGrid" class="grid grid-cols-2"></div>
-        </div>
-
-        <div class="card">
-            <h3 class="mb-2">My Recent Exam Attempts & Performance</h3>
-            <div class="table-responsive">
-                <table style="width: 100%; border-collapse: collapse; text-align: left; font-size: 0.9rem;">
-                    <thead>
-                        <tr style="border-bottom: 2px solid var(--border); color: var(--text-muted);">
-                            <th style="padding: 0.75rem;">Assessment Title</th>
-                            <th style="padding: 0.75rem;">Score</th>
-                            <th style="padding: 0.75rem;">Percentage</th>
-                            <th style="padding: 0.75rem;">Status</th>
-                            <th style="padding: 0.75rem;">Proctoring Violations</th>
-                            <th style="padding: 0.75rem;">Date</th>
-                            <th style="padding: 0.75rem; text-align: right;">Action</th>
-                        </tr>
-                    </thead>
-                    <tbody id="submissionsTableBody">
-                        <tr>
-                            <td colspan="7" class="text-center" style="padding: 1.5rem; color: var(--text-muted);">
-                                Loading submission history...
-                            </td>
-                        </tr>
-                    </tbody>
-                </table>
-            </div>
-        </div>
+<body class="student-dashboard">
+  <a class="skip-link" href="#dashboardMain">Skip to dashboard content</a>
+  <nav class="navbar" aria-label="Student navigation"><div class="container"><div class="nav-brand"><span>AssessX</span><span class="badge badge-primary">Student Portal</span></div><div class="nav-user"><span id="userName">Welcome, Student</span><button id="logoutBtn" class="btn btn-outline btn-sm" type="button">Logout</button></div></div></nav>
+  <main id="dashboardMain" class="dashboard-shell container">
+    <section class="dashboard-hero" aria-labelledby="dashboardTitle"><div><p class="eyebrow">Learning command center</p><h1 id="dashboardTitle">Make your next assessment count.</h1><p>Track momentum, build targeted skills, and take the next challenge when you are ready.</p></div><a class="btn btn-primary" href="#availableAssessments">Explore assessments <span aria-hidden="true">→</span></a></section>
+    <section class="dashboard-stats" aria-label="Performance overview">
+      <article class="metric-card metric-indigo"><span class="metric-icon" aria-hidden="true">◎</span><p>Available assessments</p><strong id="statAvailable" data-count="0">0</strong><small>Ready when you are</small></article>
+      <article class="metric-card metric-green"><span class="metric-icon" aria-hidden="true">✓</span><p>Completed tests</p><strong id="statCompleted" data-count="0">0</strong><small>Keep your streak alive</small></article>
+      <article class="metric-card metric-amber"><span class="metric-icon" aria-hidden="true">↗</span><p>Average score</p><strong id="statAvgScore" data-count="0">—</strong><small>Across submitted assessments</small></article>
+      <article class="metric-card metric-slate"><span class="metric-icon" aria-hidden="true">◷</span><p>Learning time</p><strong id="statLearningTime">0h</strong><small>Estimated from completed work</small></article>
+    </section>
+    <section class="dashboard-content-grid"><div>
+      <section id="availableAssessments" aria-labelledby="availableTitle"><div class="section-heading"><div><p class="eyebrow">Next up</p><h2 id="availableTitle">Recommended assessments</h2></div></div>
+        <div id="assessmentsLoading" class="assessment-skeletons" aria-live="polite" aria-label="Loading assessments"><div class="skeleton assessment-skeleton"></div><div class="skeleton assessment-skeleton"></div></div><div id="assessmentsGrid" class="assessment-grid"></div>
+      </section>
+      <section class="attempts-panel" aria-labelledby="attemptsTitle"><div class="section-heading"><div><p class="eyebrow">Your history</p><h2 id="attemptsTitle">Recent attempts</h2></div></div><div class="table-responsive"><table><thead><tr><th>Assessment</th><th>Score</th><th>Status</th><th>Date</th><th><span class="sr-only">Action</span></th></tr></thead><tbody id="submissionsTableBody"><tr><td colspan="5"><div class="skeleton skeleton-line"></div></td></tr></tbody></table></div></section>
     </div>
-
-    <script src="js/api.js?v=3"></script>
-    <script src="js/student.js?v=3"></script>
-    <script src="js/ui-components.js?v=1"></script>
-    <script src="js/ux-enhance.js?v=1"></script>
-</body>
-</html>
+    <aside class="insight-panel" aria-labelledby="skillTitle"><div class="section-heading"><div><p class="eyebrow">Skill radar</p><h2 id="skillTitle">Your growth map</h2></div></div><div class="radar-wrap"><svg class="skill-radar" viewBox="0 0 240 240" role="img" aria-label="Skill profile radar chart"><g class="radar-grid"><polygon points="120,20 215,89 179,201 61,201 25,89"/><polygon points="120,50 186,98 161,176 79,176 54,98"/><polygon points="120,80 158,107 143,151 97,151 82,107"/><path d="M120 20V220M25 89L215 151M215 89L25 151"/></g><polygon id="radarValue" class="radar-value" points="120,75 168,103 149,162 79,151 68,107"/></svg></div><ul class="skill-legend"><li><span class="legend-dot indigo"></span>Problem solving <strong id="skillProblem">—</strong></li><li><span class="legend-dot green"></span>Code quality <strong id="skillCode">—</strong></li><li><span class="legend-dot amber"></span>Consistency <strong id="skillConsistency">—</strong></li></ul><p class="insight-tip" id="skillTip">Complete an assessment to unlock personalized skill insights.</p></aside></section>
+  </main>
+  <script src="js/api.js?v=3"></script><script src="js/student.js?v=4"></script>
+</body></html>
