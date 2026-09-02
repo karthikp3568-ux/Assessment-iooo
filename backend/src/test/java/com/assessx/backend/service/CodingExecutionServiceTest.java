@@ -1,13 +1,15 @@
 package com.assessx.backend.service;
 
-import com.assessx.backend.entity.Question;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import org.junit.jupiter.api.Test;
 
-import static org.junit.jupiter.api.Assertions.*;
+import com.assessx.backend.entity.Question;
 
 public class CodingExecutionServiceTest {
 
-    private final CodingExecutionService service = new CodingExecutionService();
+    private final CodingExecutionService service = new CodingExecutionService(new RunletClient());
 
     @Test
     void grade_nullOrBlankCode_returnsNoCodeGrade() {
