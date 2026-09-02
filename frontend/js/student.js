@@ -93,18 +93,26 @@ function renderStats(assessments = [], submissions = []) {
     const statCompleted = document.getElementById('statCompleted');
     const statAvgScore = document.getElementById('statAvgScore');
 
-    if (statAvailable) statAvailable.textContent = assessments.length;
-    if (statCompleted) statCompleted.textContent = submissions.length;
+    animateCount(statAvailable, assessments.length);
+    animateCount(statCompleted, submissions.length);
 
     if (statAvgScore) {
         if (submissions.length > 0) {
             const totalPercent = submissions.reduce((sum, s) => sum + (s.percentage || 0), 0);
             const avg = Math.round(totalPercent / submissions.length);
-            statAvgScore.textContent = `${avg}%`;
+            animateCount(statAvgScore, avg, '%');
         } else {
             statAvgScore.textContent = 'N/A';
         }
     }
+    const hours = document.getElementById('statLearningTime');
+    if (hours) animateCount(hours, submissions.length * 1.5, 'h', true);
+    const average = submissions.length ? Math.round(submissions.reduce((sum, s) => sum + (s.percentage || 0), 0) / submissions.length) : 0;
+    setText('skillProblem', average ? `${Math.max(35, average)}%` : '—');
+    setText('skillCode', average ? `${Math.max(30, average - 6)}%` : '—');
+    setText('skillConsistency', submissions.length ? `${Math.min(100, submissions.length * 20)}%` : '—');
+    const tip = document.getElementById('skillTip');
+    if (tip && average) tip.textContent = average >= 70 ? 'Strong momentum. Try a harder assessment to stretch your skills.' : 'Your next assessment is a chance to lift your strongest skill area.';
 }
 
 function renderAssessments(assessments = []) {
@@ -119,7 +127,7 @@ function renderAssessments(assessments = []) {
     }
 
     grid.innerHTML = assessments.map(a => `
-        <div class="card flex flex-col justify-between">
+        <article class="assessment-card">
             <div>
                 <div class="flex justify-between items-center mb-2">
                     <span class="badge badge-primary">${escapeHtml(a.category || 'Assessment')}</span>
@@ -140,7 +148,7 @@ function renderAssessments(assessments = []) {
                     Start Exam →
                 </a>
             </div>
-        </div>
+        </article>
     `).join('');
 }
 
@@ -188,4 +196,22 @@ function renderSubmissions(submissions = []) {
 function escapeHtml(str) {
     if (!str) return '';
     return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
+function animateCount(element, value, suffix = '', decimal = false) {
+    if (!element) return;
+    const target = Number(value) || 0;
+    const startedAt = performance.now();
+    const draw = now => {
+        const progress = Math.min(1, (now - startedAt) / 550);
+        const current = target * (1 - Math.pow(1 - progress, 3));
+        element.textContent = `${decimal ? current.toFixed(1) : Math.round(current)}${suffix}`;
+        if (progress < 1) requestAnimationFrame(draw);
+    };
+    requestAnimationFrame(draw);
+}
+
+function setText(id, value) {
+    const element = document.getElementById(id);
+    if (element) element.textContent = value;
 }

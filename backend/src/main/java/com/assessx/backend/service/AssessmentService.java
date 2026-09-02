@@ -45,7 +45,6 @@ public class AssessmentService {
                         .programmingLanguage(q.getProgrammingLanguage() != null ? q.getProgrammingLanguage() : "java")
                         .sampleInput(q.getSampleInput())
                         .sampleOutput(q.getSampleOutput())
-                        .testCases(q.getTestCases())
                         .marks(q.getMarks())
                         .build())
                 .collect(Collectors.toList());

@@ -188,6 +188,8 @@ function renderQuestion() {
     if (!questions[currentIndex]) return;
     const q = questions[currentIndex];
     const isCoding = (q.questionType && q.questionType.toUpperCase() === 'CODING') || q.starterCode;
+    document.body.classList.toggle('coding-mode', !!isCoding);
+    document.querySelector('.coding-editor-panel')?.remove();
 
     // Destroy previous CodeMirror instance
     if (codeMirrorInstance) {
@@ -214,7 +216,9 @@ function renderQuestion() {
 
     if (isCoding) {
         const lang = q.programmingLanguage || 'java';
-        const savedCode = answers[q.id] || q.starterCode || `// Write your ${lang} code here\n`;
+        const savedCode = Object.prototype.hasOwnProperty.call(answers, q.id)
+            ? answers[q.id]
+            : (q.starterCode || getCleanStarterTemplate(lang));
         const testCases = getTestCasesForQuestion(q);
 
         // Build test cases display
@@ -289,6 +293,23 @@ Click "Run Code & Test" to compile and execute your implementation against test 
 
             ${testCasesHtml}
         `;
+
+        // Split the coding workspace into dedicated problem, editor, and results panels.
+        const examGrid = document.querySelector('.exam-grid');
+        const editorBox = optionsContainer.querySelector('.code-editor-box');
+        const testPanel = optionsContainer.querySelector('.test-cases-panel');
+        const sidebar = examGrid?.lastElementChild;
+        if (examGrid && editorBox && sidebar) {
+            const editorPanel = document.createElement('section');
+            editorPanel.className = 'coding-editor-panel';
+            editorPanel.setAttribute('aria-label', 'Code editor');
+            editorPanel.appendChild(editorBox);
+            examGrid.insertBefore(editorPanel, sidebar);
+            if (testPanel) {
+                testPanel.classList.add('coding-results-panel');
+                sidebar.prepend(testPanel);
+            }
+        }
 
         // Initialize CodeMirror
         const cmMode = CM_MODE_MAP[lang] || 'text/x-java';
@@ -399,7 +420,7 @@ window.handleCodeInput = function(questionId, code) {
 window.resetStarterCode = function(questionId) {
     const q = questions.find(x => x.id === questionId);
     if (!q) return;
-    const starter = q.starterCode || '';
+    const starter = q.starterCode || getCleanStarterTemplate(q.programmingLanguage || 'java');
     answers[questionId] = starter;
     if (codeMirrorInstance) {
         codeMirrorInstance.setValue(starter);
@@ -425,6 +446,19 @@ window.runCodeTestCases = async function(questionId) {
         consoleEl.className = 'terminal-console error';
         consoleEl.textContent = '❌ Error: Solution is empty or too short. Please write your code first.';
         if (statusBadge) { statusBadge.textContent = 'Empty code'; statusBadge.style.color = '#F87171'; }
+        return;
+    }
+
+    // Run uses the current editor contents and public sample input only; it never awards marks.
+    try {
+        const result = await ApiService.post(`/assessments/${assessment.id}/run`, { questionId, code, input: q.sampleInput || '' });
+        consoleEl.className = result.success ? 'terminal-console success' : 'terminal-console error';
+        consoleEl.textContent = result.success ? (result.output || '(no output)') : `Error: ${result.error || 'Execution failed.'}`;
+        if (statusBadge) statusBadge.textContent = result.success ? 'Run completed (no marks awarded)' : 'Run failed';
+        return;
+    } catch (error) {
+        consoleEl.className = 'terminal-console error';
+        consoleEl.textContent = `Error: ${error.message}`;
         return;
     }
 
@@ -1198,9 +1232,9 @@ async function submitExam(auto = false) {
                 let marks = 0;
 
                 if (isCoding) {
-                    const code = answers[q.id] || '';
-                    isCorr = code.trim().length > 15 && (code.includes('return') || code.includes('print') || code.includes('System.out') || code.includes('console.log'));
-                    marks = isCorr ? (q.marks || 10) : 0;
+                    // Only the server has hidden tests, so an offline browser may not award coding marks.
+                    isCorr = false;
+                    marks = 0;
                 } else {
                     isCorr = answers[q.id] === q.correctOption;
                     marks = isCorr ? (q.marks || 10) : 0;
@@ -1218,7 +1252,6 @@ async function submitExam(auto = false) {
                     selectedOption: isCoding ? null : (answers[q.id] || null),
                     correctOption: isCoding ? null : q.correctOption,
                     submittedCode: isCoding ? (answers[q.id] || '// No code submitted') : null,
-                    solutionCode: isCoding ? q.starterCode : null,
                     testResults: isCoding ? (isCorr ? '✅ All Test Cases Passed' : '❌ Failed Test Cases') : null,
                     explanation: q.explanation,
                     correct: isCorr,

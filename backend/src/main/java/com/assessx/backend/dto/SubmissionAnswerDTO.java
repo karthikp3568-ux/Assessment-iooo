@@ -16,7 +16,6 @@ public class SubmissionAnswerDTO {
     private String selectedOption;
     private String correctOption;
     private String submittedCode;
-    private String solutionCode;
     private String testResults;
     private boolean correct;
     private int marksAwarded;

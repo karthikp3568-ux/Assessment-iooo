@@ -268,6 +268,10 @@ window.addQuestionBlock = function(defaultType = 'MCQ') {
                 <label class="form-label" style="font-size: 0.75rem;">Starter Template Code</label>
                 <textarea class="form-control q-starter" rows="4" style="font-family: monospace; font-size: 0.8125rem;" placeholder="public class Solution {\n    public static int solve() {\n        // Student code here\n        return 0;\n    }\n}"></textarea>
             </div>
+            <div class="form-group mb-2">
+                <label class="form-label" style="font-size: 0.75rem;">Reference Solution (private)</label>
+                <textarea class="form-control q-solution" rows="4" style="font-family: monospace; font-size: 0.8125rem;" placeholder="Private correct implementation; never shown to students"></textarea>
+            </div>
 
             <!-- Dynamic Test Cases Section -->
             <div class="test-cases-section mb-2">
@@ -419,6 +423,7 @@ async function saveNewAssessment() {
         if (qType === 'CODING') {
             const lang = b.querySelector('.q-lang')?.value || 'java';
             const starter = b.querySelector('.q-starter')?.value || `// Write your ${lang} code here\n`;
+            const solutionCode = b.querySelector('.q-solution')?.value || '';
             const marks = parseInt(b.querySelector('.q-coding-marks')?.value || '10', 10);
 
             // Collect all test cases
@@ -435,6 +440,7 @@ async function saveNewAssessment() {
                     questionText: qText,
                     programmingLanguage: lang,
                     starterCode: starter,
+                    solutionCode,
                     sampleInput: sInput,
                     sampleOutput: sOutput,
                     testCases: JSON.stringify(testCases),

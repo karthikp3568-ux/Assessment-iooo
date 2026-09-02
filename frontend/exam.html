@@ -6,6 +6,7 @@
     <title>Live Assessment - AssessX Secure Proctoring</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/design-system.css">
     
     <!-- CodeMirror 5 - Code Editor with Syntax Highlighting -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.css">
@@ -92,7 +93,8 @@
     </div>
 
     <!-- Exam Header -->
-    <header class="exam-header">
+    <a class="skip-link" href="#examWorkspace">Skip to assessment workspace</a>
+    <header class="exam-header" aria-label="Assessment controls">
         <div>
             <h3 id="examTitle" style="font-size: 1.2rem; margin-bottom: 0.15rem;">Loading Assessment...</h3>
             <span id="examMeta" style="font-size: 0.8125rem; color: var(--text-muted);">Duration: - mins</span>
@@ -108,7 +110,7 @@
         </div>
     </header>
 
-    <div class="container">
+    <main id="examWorkspace" class="container" aria-live="polite">
         <div class="exam-grid">
             <!-- Main Question Area -->
             <div>
@@ -161,7 +163,7 @@
                     </div>
 
                     <div class="webcam-feed" id="webcamFeedBox">
-                        <video id="webcamVideo" autoplay playsinline muted style="width: 100%; height: 100%; object-fit: cover; border-radius: 0.375rem;" class="hidden"></video>
+                        <video id="webcamVideo" aria-label="Proctoring camera preview" autoplay playsinline muted style="width: 100%; height: 100%; object-fit: cover; border-radius: 0.375rem;" class="hidden"></video>
                         <canvas id="detectionCanvas" class="detection-canvas"></canvas>
                         <div id="webcamPlaceholder" style="text-align: center; color: #94A3B8; font-size: 0.8125rem;">
                             <div style="font-size: 1.5rem; margin-bottom: 0.25rem;">📹</div>
@@ -190,7 +192,7 @@
                 </div>
             </div>
         </div>
-    </div>
+    </main>
 
     <!-- Submit Confirmation Modal -->
     <div id="submitModal" class="modal-overlay hidden">
@@ -222,5 +224,7 @@
 
     <script src="js/api.js?v=4"></script>
     <script src="js/exam.js?v=4"></script>
+    <script src="js/ui-components.js?v=1"></script>
+    <script src="js/ux-enhance.js?v=1"></script>
 </body>
 </html>
