@@ -1,8 +1,8 @@
 package com.assessx.backend.service;
 
 import com.assessx.backend.entity.Question;
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import org.json.JSONArray;
+import org.json.JSONObject;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.*;
@@ -17,21 +17,25 @@ import org.slf4j.LoggerFactory;
 public class CodingExecutionService {
     private static final Logger log = LoggerFactory.getLogger(CodingExecutionService.class);
     private static final Pattern CLASS = Pattern.compile("public\\s+class\\s+([A-Za-z_][A-Za-z0-9_]*)");
-    private final ObjectMapper json = new ObjectMapper();
+    
 
     public Grade grade(Question question, String code) {
         if (code == null || code.isBlank()) return new Grade(0, 0, false, "No code submitted.");
         try {
-            JsonNode tests = json.readTree(question.getTestCases());
-            if (tests == null || !tests.isArray() || tests.isEmpty()) return new Grade(0, 0, false, "No hidden test cases are configured.");
-            log.info("Coding submission received: questionId={}, language={}, codeLength={}, testCases={}", question.getId(), question.getProgrammingLanguage(), code.length(), tests.size());
+            String tc = question.getTestCases();
+            if (tc == null || tc.isBlank()) return new Grade(0, 0, false, "No hidden test cases are configured.");
+            JSONArray tests = new JSONArray(tc);
+            if (tests.isEmpty()) return new Grade(0, 0, false, "No hidden test cases are configured.");
+            log.info("Coding submission received: questionId={}, language={}, codeLength={}, testCases={}", question.getId(), question.getProgrammingLanguage(), code.length(), tests.length());
             int passed = 0;
-            for (JsonNode test : tests) {
-                Result result = run(question.getProgrammingLanguage(), code, test.path("input").asText(""));
-                String expected = test.has("expectedOutput") ? test.path("expectedOutput").asText("") : test.path("output").asText("");
+            for (int i = 0; i < tests.length(); i++) {
+                JSONObject test = tests.getJSONObject(i);
+                String input = test.has("input") ? test.optString("input", "") : "";
+                String expected = test.has("expectedOutput") ? test.optString("expectedOutput", "") : test.optString("output", "");
+                Result result = run(question.getProgrammingLanguage(), code, input);
                 if (result.success && normalize(result.output).equals(normalize(expected))) passed++;
             }
-            return new Grade(passed, tests.size(), passed == tests.size(), passed + "/" + tests.size() + " hidden test cases passed");
+            return new Grade(passed, tests.length(), passed == tests.length(), passed + "/" + tests.length() + " hidden test cases passed");
         } catch (Exception e) { return new Grade(0, 0, false, "Unable to evaluate submission."); }
     }
 
